@@ -32,7 +32,7 @@ The application will start on `http://localhost:8080`
 
 ```bash
 # Run all tests
-mvn test
+cd /home/santiago/Documents/compunet2/proyecto-final-erome/pensamientoComputacional && ./mvnw test
 
 # Run tests with coverage report
 mvn clean test jacoco:report
