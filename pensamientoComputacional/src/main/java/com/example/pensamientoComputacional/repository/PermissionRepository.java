@@ -13,6 +13,6 @@ public interface PermissionRepository extends JpaRepository<Permission, Long> {
     boolean existsByName(String name);
     List<Permission> findByNameContainingIgnoreCase(String name);
     
-    @Query("SELECT p FROM Permission p JOIN p.roles r WHERE r.id = :roleId")
+    @Query("SELECT p FROM Role r JOIN r.permissions p WHERE r.id = :roleId")
     List<Permission> findByRoleId(Long roleId);
 }
