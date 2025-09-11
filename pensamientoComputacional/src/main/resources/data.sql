@@ -7,7 +7,7 @@ INSERT INTO permissions (name, description) VALUES
 ('WRITE_ROLE', 'Permite crear y modificar roles'),
 ('DELETE_ROLE', 'Permite eliminar roles'),
 ('MANAGE_ACTIVITIES', 'Permite gestionar actividades'),
-('GRADE_EXERCISES', 'Permite calificar ejercicios'),
+('GRADE_EXERCISES', 'Permite calificar ejercicios'),    
 ('VIEW_REPORTS', 'Permite ver reportes'),
 ('EXPORT_DATA', 'Permite exportar datos');
 
