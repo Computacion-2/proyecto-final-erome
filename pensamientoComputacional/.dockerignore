@@ -1,0 +1,18 @@
+# Maven and build output
+/target
+
+# Local environment and IDE files
+/.idea
+/.vscode
+*.iml
+
+# Git
+.git
+.gitignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Maven wrapper cache
+.mvn/wrapper/maven-wrapper.jar
