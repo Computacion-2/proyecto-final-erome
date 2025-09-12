@@ -111,11 +111,63 @@ java -jar target/spring-boot-jpa-workshop-1.0.0.jar
 ```
 
 ### Docker
-```bash
-# Build Docker image
-docker build -t spring-boot-jpa-workshop .
 
-# Run container
-docker run -p 8080:8080 spring-boot-jpa-workshop
+#### Prerequisites
+Make sure Docker is running on your system. If using Docker Desktop, ensure it's started.
+
+#### Build and Run with Docker
+
+1. **Navigate to the project directory**
+   ```bash
+   cd proyecto-final-erome/pensamientoComputacional
+   ```
+
+2. **Build the Docker image**
+   ```bash
+   docker build -t pensamiento-computacional:local .
+   ```
+
+3. **Run the container**
+   ```bash
+   docker run -d --rm -p 8080:8080 --name pc-app pensamiento-computacional:local
+   ```
+
+4. **Verify the application is running**
+   ```bash
+   curl http://localhost:8080/health
+   # Should return: OK
+   ```
+
+5. **Access the application**
+   - Main application: `http://localhost:8080`
+   - H2 Console: `http://localhost:8080/h2-console`
+   - Health check: `http://localhost:8080/health`
+
+#### Stop the Container
+
+When you're done testing or no longer need the container running:
+
+```bash
+# Stop the container (it will be automatically removed due to --rm flag)
+docker stop pc-app
+```
+
+#### Alternative: Run in foreground (for debugging)
+```bash
+# Run without -d flag to see logs in real-time
+docker run --rm -p 8080:8080 --name pc-app pensamiento-computacional:local
+
+# Press Ctrl+C to stop
+```
+
+#### Docker Environment Variables
+You can customize the application behavior using environment variables:
+
+```bash
+# Run with custom Spring profile
+docker run -d --rm -p 8080:8080 -e SPRING_PROFILES_ACTIVE=production --name pc-app pensamiento-computacional:local
+
+# Run with custom JVM options
+docker run -d --rm -p 8080:8080 -e JAVA_OPTS="-Xmx1g -Xms512m" --name pc-app pensamiento-computacional:local
 ```
 
