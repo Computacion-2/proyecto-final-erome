@@ -1,5 +1,6 @@
 # Spring Boot JPA 
 
+cd /home/santiago/Documents/compunet2/proyecto-final-erome/pensamientoComputacional && ./mvnw clean spring-boot:run
 
 1. **Step in the project**
    ```bash
