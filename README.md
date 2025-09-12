@@ -169,5 +169,83 @@ docker run -d --rm -p 8080:8080 -e SPRING_PROFILES_ACTIVE=production --name pc-a
 
 # Run with custom JVM options
 docker run -d --rm -p 8080:8080 -e JAVA_OPTS="-Xmx1g -Xms512m" --name pc-app pensamiento-computacional:local
+
+
+
+
+
+
+
+
+
+## Deployment on x104m30
+
+### Prerequisites on x104m30
+
+- Java 11 (OpenJDK 11.0.26)
+- SSH access with user: `computacion2`
+- Password: `computacion2`
+
+### Deployment Steps
+
+1. **Build the project locally** (if not already done):
+   ```bash
+   mvn clean package -DskipTests
+   ```
+
+2. **Copy the .war file to x104m30**:
+   ```bash
+   scp target/IntroSpringboot-0.0.1-SNAPSHOT.war computacion2@x104m30:~/
+   ```
+
+3. **Connect to x104m30**:
+   ```bash
+   ssh computacion2@x104m30
+   ```
+
+4. **Deploy the application**:
+   ```bash
+   cd ~
+   nohup java -jar IntroSpringboot-0.0.1-SNAPSHOT.war --server.port=8080 > app.log 2>&1 &
+   ```
+
+5. **Verify deployment**:
+   ```bash
+   # Check if the application is running
+   ps aux | grep java
+   
+   # Check application logs
+   tail -f app.log
+   
+   # Test the API (from your local machine)
+   curl http://x104m30:8080/students
+   ```
+
+### Accessing the Application
+
+Once deployed, the application will be available at:
+- **Main Application**: `http://x104m30:8080`
+- **H2 Database Console**: `http://x104m30:8080/h2`
+- **API Endpoints**:
+  - Students: `http://x104m30:8080/students`
+  - Courses: `http://x104m30:8080/courses`
+  - Professors: `http://x104m30:8080/professors`
+  - Accounts: `http://x104m30:8080/accounts`
+
+### Stopping the Application
+
+To stop the application on x104m30:
+
+```bash
+# Connect to x104m30
+ssh computacion2@x104m30
+
+# Kill the Java process
+pkill -f java
+
+# Or find and kill the specific process
+ps aux | grep java
+kill <PID>
+```
 ```
 
