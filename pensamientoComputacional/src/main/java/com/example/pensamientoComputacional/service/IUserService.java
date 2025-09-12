@@ -10,4 +10,7 @@ public interface IUserService {
     User getUser(Long id);
     List<User> getAllUsers();
     User findByEmail(String email);
+    List<User> getUsersByRole(Long roleId);
+    List<User> getActiveUsers();
+    List<User> getUsersWithoutRoles();
 }

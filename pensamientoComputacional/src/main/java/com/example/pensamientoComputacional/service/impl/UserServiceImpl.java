@@ -80,6 +80,21 @@ public class UserServiceImpl implements IUserService {
             .orElseThrow(() -> new BusinessException("User not found with email: " + email));
     }
     
+    @Override
+    public List<User> getUsersByRole(Long roleId) {
+        return userRepository.findByRoleId(roleId);
+    }
+    
+    @Override
+    public List<User> getActiveUsers() {
+        return userRepository.findAllActiveUsers();
+    }
+    
+    @Override
+    public List<User> getUsersWithoutRoles() {
+        return userRepository.findUsersWithoutRoles();
+    }
+    
     private void validateRoles(Set<Role> roles) {
         if (roles == null || roles.isEmpty()) {
             throw new BusinessException("User must have at least one role");

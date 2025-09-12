@@ -11,4 +11,6 @@ public interface IRoleService {
     List<Role> getAllRoles();
     Role findByName(String name);
     Role addPermissionToRole(Long roleId, Long permissionId);
+    List<Role> getRolesByPermission(Long permissionId);
+    List<Role> getRolesWithoutPermissions();
 }

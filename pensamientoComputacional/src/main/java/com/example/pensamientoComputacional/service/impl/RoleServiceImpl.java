@@ -88,6 +88,16 @@ public class RoleServiceImpl implements IRoleService {
         return roleRepository.save(role);
     }
     
+    @Override
+    public List<Role> getRolesByPermission(Long permissionId) {
+        return roleRepository.findByPermissionId(permissionId);
+    }
+    
+    @Override
+    public List<Role> getRolesWithoutPermissions() {
+        return roleRepository.findRolesWithoutPermissions();
+    }
+    
     private void validatePermissions(Set<Permission> permissions) {
         if (permissions == null || permissions.isEmpty()) {
             throw new BusinessException("Role must have at least one permission");

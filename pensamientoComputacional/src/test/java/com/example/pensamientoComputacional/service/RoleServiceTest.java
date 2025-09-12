@@ -343,4 +343,51 @@ class RoleServiceTest {
         assertThat(updatedRole.getPermissions()).hasSize(1); // Should remain 1, not duplicate
         assertThat(updatedRole.getPermissions()).contains(testPermission);
     }
+
+    @Test
+    @DisplayName("Should get roles by permission successfully")
+    void shouldGetRolesByPermissionSuccessfully() {
+        // Given
+        Role role1 = roleService.createRole(testRole);
+        
+        Permission permission2 = permissionRepository.save(createTestPermissionWithName("PERMISSION_2"));
+        Role role2 = createTestRoleWithName("ROLE_2");
+        Set<Permission> permissions2 = new HashSet<>();
+        permissions2.add(permission2);
+        role2.setPermissions(permissions2);
+        role2 = roleService.createRole(role2);
+
+        // When
+        List<Role> rolesWithTestPermission = roleService.getRolesByPermission(testPermission.getId());
+
+        // Then
+        assertThat(rolesWithTestPermission).hasSize(1);
+        assertThat(rolesWithTestPermission.get(0).getName()).isEqualTo("TEST_ROLE");
+    }
+
+    @Test
+    @DisplayName("Should get roles without permissions successfully")
+    void shouldGetRolesWithoutPermissionsSuccessfully() {
+        // Given
+        Role roleWithPermissions = roleService.createRole(testRole);
+        
+        // Create a role with permissions first, then remove them using direct SQL to bypass validation
+        Role roleWithoutPermissions = createTestRoleWithName("ROLE_WITHOUT_PERMISSIONS");
+        roleWithoutPermissions.setPermissions(new HashSet<>(Set.of(testPermission)));
+        roleWithoutPermissions = roleRepository.save(roleWithoutPermissions);
+        
+        // Remove permissions using direct SQL to bypass validation
+        entityManager.getEntityManager().createNativeQuery("DELETE FROM role_permissions WHERE role_id = ?")
+                .setParameter(1, roleWithoutPermissions.getId())
+                .executeUpdate();
+        entityManager.flush();
+        entityManager.clear();
+
+        // When
+        List<Role> rolesWithoutPermissions = roleService.getRolesWithoutPermissions();
+
+        // Then
+        assertThat(rolesWithoutPermissions).hasSize(1);
+        assertThat(rolesWithoutPermissions.get(0).getName()).isEqualTo("ROLE_WITHOUT_PERMISSIONS");
+    }
 }

@@ -453,4 +453,73 @@ class UserServiceTest {
         
         assertThat(exception.getMessage()).contains("Role ROLE_WITHOUT_PERMISSIONS must have at least one permission");
     }
+
+    @Test
+    @DisplayName("Should get users by role successfully")
+    void shouldGetUsersByRoleSuccessfully() {
+        // Given
+        User user1 = userService.createUser(testUser);
+        
+        Permission permission2 = permissionRepository.save(createTestPermissionWithName("PERMISSION_2"));
+        Role role2 = createTestRoleWithName("ROLE_2");
+        Set<Permission> permissions2 = new HashSet<>();
+        permissions2.add(permission2);
+        role2.setPermissions(permissions2);
+        role2 = roleRepository.save(role2);
+        
+        User user2 = createTestUserWithEmail("user2@example.com");
+        Set<Role> roles2 = new HashSet<>();
+        roles2.add(role2);
+        user2.setRoles(roles2);
+        user2 = userService.createUser(user2);
+
+        // When
+        List<User> usersWithTestRole = userService.getUsersByRole(testRole.getId());
+
+        // Then
+        assertThat(usersWithTestRole).hasSize(1);
+        assertThat(usersWithTestRole.get(0).getEmail()).isEqualTo("test@example.com");
+    }
+
+    @Test
+    @DisplayName("Should get active users successfully")
+    void shouldGetActiveUsersSuccessfully() {
+        // Given
+        User activeUser = userService.createUser(testUser);
+        
+        User inactiveUser = createTestUserWithEmail("inactive@example.com");
+        inactiveUser.setIsActive(false);
+        // Create a new set of roles to avoid shared collection references
+        Set<Role> inactiveUserRoles = new HashSet<>();
+        inactiveUserRoles.add(testRole);
+        inactiveUser.setRoles(inactiveUserRoles);
+        inactiveUser = userService.createUser(inactiveUser);
+
+        // When
+        List<User> activeUsers = userService.getActiveUsers();
+
+        // Then
+        assertThat(activeUsers).hasSize(1);
+        assertThat(activeUsers.get(0).getEmail()).isEqualTo("test@example.com");
+        assertThat(activeUsers.get(0).getIsActive()).isTrue();
+    }
+
+    @Test
+    @DisplayName("Should get users without roles successfully")
+    void shouldGetUsersWithoutRolesSuccessfully() {
+        // Given
+        User userWithRole = userService.createUser(testUser);
+        
+        // Create a user without roles using direct SQL to bypass validation
+        User userWithoutRole = createTestUserWithEmail("norole@example.com");
+        userWithoutRole.setRoles(new HashSet<>());
+        userWithoutRole = userRepository.save(userWithoutRole);
+
+        // When
+        List<User> usersWithoutRoles = userService.getUsersWithoutRoles();
+
+        // Then
+        assertThat(usersWithoutRoles).hasSize(1);
+        assertThat(usersWithoutRoles.get(0).getEmail()).isEqualTo("norole@example.com");
+    }
 }
