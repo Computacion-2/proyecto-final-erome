@@ -1,3 +1,7 @@
+###deployed in
+
+http://x104m10:8080/pensamientoComputacional-0.0.1-SNAPSHOT/
+
 # Spring Boot JPA 
 
 cd /home/santiago/Documents/compunet2/proyecto-final-erome/pensamientoComputacional && ./mvnw clean spring-boot:run
