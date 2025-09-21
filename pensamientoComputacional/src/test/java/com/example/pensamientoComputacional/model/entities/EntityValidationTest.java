@@ -5,7 +5,6 @@ import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -24,17 +23,12 @@ class EntityValidationTest {
     @PersistenceContext
     private EntityManager entityManager;
 
-    private Permission testPermission;
-    private Role testRole;
-    private User testUser;
 
     @BeforeEach
     void setUp() {
         // Create unique test data for each test
         String timestamp = String.valueOf(System.currentTimeMillis());
-        testPermission = createTestPermissionWithName("TEST_PERMISSION_" + timestamp);
-        testRole = createTestRoleWithName("TEST_ROLE_" + timestamp);
-        testUser = createTestUserWithEmail("test_" + timestamp + "@example.com");
+        // Initialize test data as needed in individual tests
     }
 
     private User createTestUser() {

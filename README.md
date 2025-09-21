@@ -2,26 +2,89 @@
 
 http://x104m10:8080/pensamientoComputacional-0.0.1-SNAPSHOT/
 
-# Spring Boot JPA 
+# Spring Boot JPA - Pensamiento Computacional
 
-cd /home/santiago/Documents/compunet2/proyecto-final-erome/pensamientoComputacional && ./mvnw clean spring-boot:run
+## Quick Start
 
-1. **Step in the project**
-   ```bash
-   cd tallerSpringBootJPA
-   ```
+### Prerequisites
+- Java 21 (OpenJDK 21)
+- Maven (included with Maven Wrapper)
 
-2. **Build the project**
-   ```bash
-   mvn clean install
-   ```
+### 1. Navigate to the project directory
+```bash
+cd pensamientoComputacional
+```
 
-3. **Run the application**
-   ```bash
-   mvn spring-boot:run
-   ```
+### 2. Compile the project
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw clean compile
+```
+
+### 3. Run tests
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw test
+```
+
+### 4. Run the application
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw spring-boot:run
+```
 
 The application will start on `http://localhost:8080`
+
+## Alternative Commands
+
+### Build the project (with tests)
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw clean install
+```
+
+### Run tests with coverage report
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw clean test jacoco:report
+```
+
+### Package the application
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw clean package
+```
+
+## Troubleshooting
+
+### Common Issues
+
+#### Java Version Issues
+If you get "release version 21 not supported" error:
+```bash
+# Check Java version
+java -version
+
+# Set JAVA_HOME explicitly
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+
+# Verify Maven uses correct Java version
+./mvnw -version
+```
+
+#### Compilation Issues
+If compilation fails:
+```bash
+# Clean and recompile
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw clean compile
+
+# Check for syntax errors
+./mvnw compile -X
+```
+
+#### Test Failures
+If tests fail:
+```bash
+# Run tests with verbose output
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw test -X
+
+# Run specific test class
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw test -Dtest=UserServiceTest
+```
 
 ### Database Access
 
@@ -37,17 +100,22 @@ The application will start on `http://localhost:8080`
 
 ```bash
 # Run all tests
-cd /home/santiago/Documents/compunet2/proyecto-final-erome/pensamientoComputacional && ./mvnw test
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw test
 
 # Run tests with coverage report
-mvn clean test jacoco:report
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw clean test jacoco:report
 
 # Run specific test class
-mvn test -Dtest=UserServiceTest
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw test -Dtest=UserServiceTest
 
 # Run tests with detailed output
-mvn test -Dspring.profiles.active=test
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw test -Dspring.profiles.active=test
 ```
+
+### Test Results
+- **Total Tests**: 116 tests
+- **Status**: ✅ All tests passing
+- **Coverage**: Available in `target/site/jacoco/index.html`
 
 ### Test Coverage
 
@@ -105,13 +173,13 @@ curl -X GET http://localhost:8080/api/users/role/1
 
 ### Local Development
 ```bash
-mvn spring-boot:run
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw spring-boot:run
 ```
 
 ### Production Build
 ```bash
-mvn clean package
-java -jar target/spring-boot-jpa-workshop-1.0.0.jar
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw clean package
+java -jar target/pensamientoComputacional-0.0.1-SNAPSHOT.war
 ```
 
 ### Docker

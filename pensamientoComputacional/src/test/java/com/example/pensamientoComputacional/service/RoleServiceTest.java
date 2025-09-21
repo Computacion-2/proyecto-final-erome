@@ -1,6 +1,5 @@
 package com.example.pensamientoComputacional.service;
 
-import com.example.pensamientoComputacional.TestBase;
 import com.example.pensamientoComputacional.model.entities.Permission;
 import com.example.pensamientoComputacional.model.entities.Role;
 import com.example.pensamientoComputacional.repository.PermissionRepository;

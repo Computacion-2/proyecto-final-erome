@@ -1,6 +1,5 @@
 package com.example.pensamientoComputacional.service;
 
-import com.example.pensamientoComputacional.TestBase;
 import com.example.pensamientoComputacional.model.entities.Permission;
 import com.example.pensamientoComputacional.repository.PermissionRepository;
 import com.example.pensamientoComputacional.service.exception.BusinessException;
@@ -9,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -30,8 +28,6 @@ class PermissionServiceTest {
     @Autowired
     private PermissionRepository permissionRepository;
 
-    @Autowired
-    private TestEntityManager entityManager;
 
     private Permission testPermission;
 

@@ -7,7 +7,6 @@ import com.example.pensamientoComputacional.service.IPermissionService;
 import com.example.pensamientoComputacional.service.IRoleService;
 import com.example.pensamientoComputacional.service.IUserService;
 import com.example.pensamientoComputacional.service.exception.BusinessException;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +19,6 @@ import jakarta.persistence.PersistenceContext;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.*;
