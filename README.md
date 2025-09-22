@@ -2,6 +2,9 @@
 
 http://x104m10:8080/pensamientoComputacional-0.0.1-SNAPSHOT/
 
+###Video link
+https://youtu.be/bQTgy6Sn2Uo
+
 # Spring Boot JPA - Pensamiento Computacional
 
 ## Quick Start
