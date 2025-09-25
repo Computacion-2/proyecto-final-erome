@@ -39,30 +39,30 @@ public class UserAdminController {
     public String listUsers(Model model) {
         List<User> users = userService.getAllUsers();
         model.addAttribute("users", users);
+        model.addAttribute("allRoles", roleRepository.findAll());
         return "admin/users/list";
     }
 
     @GetMapping("/create")
-    @PreAuthorize("hasAuthority('WRITE_USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public String createUserForm(Model model) {
-        model.addAttribute("roles", roleRepository.findAll());
         return "admin/users/create";
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('WRITE_USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public String createUser(@RequestParam String name,
                              @RequestParam String email,
-                             @RequestParam String password,
-                             @RequestParam(required = false) List<Long> roleIds) {
+                             @RequestParam String password) {
         User user = new User();
         user.setName(name);
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(password));
-        if (roleIds != null) {
-            Set<Role> roles = new HashSet<>(roleRepository.findAllById(roleIds));
-            user.setRoles(roles);
-        }
+        // Force STUDENT role only for newly created users
+        Role studentRole = roleRepository.findByName("STUDENT").orElseThrow();
+        Set<Role> roles = new HashSet<>();
+        roles.add(studentRole);
+        user.setRoles(roles);
         userService.createUser(user);
         return "redirect:/admin/users";
     }
@@ -75,7 +75,7 @@ public class UserAdminController {
     }
 
     @PostMapping("/{userId}/add-role")
-    @PreAuthorize("hasAuthority('WRITE_USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public String addRoleToUser(@PathVariable Long userId, @RequestParam Long roleId) {
         User user = userRepository.findById(userId).orElseThrow();
         Role role = roleRepository.findById(roleId).orElseThrow();
@@ -85,7 +85,7 @@ public class UserAdminController {
     }
 
     @PostMapping("/{userId}/remove-role")
-    @PreAuthorize("hasAuthority('WRITE_USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public String removeRoleFromUser(@PathVariable Long userId, @RequestParam Long roleId) {
         User user = userRepository.findById(userId).orElseThrow();
         Role role = roleRepository.findById(roleId).orElseThrow();

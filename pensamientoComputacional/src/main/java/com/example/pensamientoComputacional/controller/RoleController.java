@@ -61,6 +61,26 @@ public class RoleController {
         roleRepository.deleteById(id);
         return "redirect:/admin/roles";
     }
+
+    @GetMapping("/{id}/edit")
+    @PreAuthorize("hasAuthority('WRITE_ROLE') or hasRole('ADMIN')")
+    public String editRole(@PathVariable Long id, Model model) {
+        Role role = roleRepository.findById(id).orElseThrow();
+        model.addAttribute("role", role);
+        model.addAttribute("permissions", permissionRepository.findAll());
+        return "admin/roles/edit";
+    }
+
+    @PostMapping("/{id}/permissions")
+    @PreAuthorize("hasAuthority('WRITE_ROLE') or hasRole('ADMIN')")
+    public String updateRolePermissions(@PathVariable Long id,
+                                        @RequestParam(required = false) List<Long> permissionIds) {
+        Role role = roleRepository.findById(id).orElseThrow();
+        Set<Permission> newPerms = permissionIds == null ? new HashSet<>() : new HashSet<>(permissionRepository.findAllById(permissionIds));
+        role.setPermissions(newPerms);
+        roleRepository.save(role);
+        return "redirect:/admin/roles";
+    }
 }
 
 
