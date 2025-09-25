@@ -7,6 +7,7 @@ https://youtu.be/bQTgy6Sn2Uo
 
 # Spring Boot JPA - Pensamiento Computacional
 
+
 ## Quick Start
 
 ### Prerequisites
