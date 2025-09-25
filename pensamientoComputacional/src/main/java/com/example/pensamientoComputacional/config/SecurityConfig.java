@@ -57,7 +57,7 @@ public class SecurityConfig {
                 .loginProcessingUrl("/auth/login")
                 .usernameParameter("email")
                 .passwordParameter("password")
-                .defaultSuccessUrl("/admin/users", true)
+                .defaultSuccessUrl("/", false)
                 .failureUrl("/auth/login?error=true")
                 .permitAll()
             )

@@ -46,6 +46,7 @@ public class UserAdminController {
     @GetMapping("/create")
     @PreAuthorize("hasRole('ADMIN')")
     public String createUserForm(Model model) {
+        model.addAttribute("roles", roleRepository.findAll());
         return "admin/users/create";
     }
 
@@ -53,15 +54,19 @@ public class UserAdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public String createUser(@RequestParam String name,
                              @RequestParam String email,
-                             @RequestParam String password) {
+                             @RequestParam String password,
+                             @RequestParam(required = false) List<Long> roleIds) {
         User user = new User();
         user.setName(name);
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(password));
-        // Force STUDENT role only for newly created users
-        Role studentRole = roleRepository.findByName("STUDENT").orElseThrow();
         Set<Role> roles = new HashSet<>();
-        roles.add(studentRole);
+        if (roleIds != null && !roleIds.isEmpty()) {
+            roles.addAll(roleRepository.findAllById(roleIds));
+        } else {
+            Role studentRole = roleRepository.findByName("STUDENT").orElseThrow();
+            roles.add(studentRole);
+        }
         user.setRoles(roles);
         userService.createUser(user);
         return "redirect:/admin/users";

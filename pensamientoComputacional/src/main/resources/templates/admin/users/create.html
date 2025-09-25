@@ -22,7 +22,14 @@
       <label class="form-label">Contraseña</label>
       <input class="form-control" type="password" name="password" required />
     </div>
-    <div class="alert alert-info">Este usuario será creado con el rol STUDENT.</div>
+    <div class="mb-3">
+      <label class="form-label">Roles</label>
+      <select class="form-select" name="roleIds" multiple size="5">
+        <option th:each="r : ${roles}" th:value="${r.id}" th:text="${r.name}"
+                th:selected="${r.name == 'STUDENT'}"></option>
+      </select>
+      <div class="form-text">Si no seleccionas roles, se asignará STUDENT por defecto.</div>
+    </div>
     <button class="btn btn-success" type="submit">Guardar</button>
     <a class="btn btn-secondary" th:href="@{/admin/users}">Cancelar</a>
   </form>
