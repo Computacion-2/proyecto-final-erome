@@ -1,20 +1,19 @@
 package com.example.pensamientoComputacional.controller;
 
-import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
 
-@RestController
+@Controller
 public class RootController {
 
     @GetMapping("/")
-    public ResponseEntity<String> root() {
-        return ResponseEntity.ok("PensamientoComputacional API is running");
+    public String index() {
+        return "index";
     }
 
     @GetMapping("/health")
-    public ResponseEntity<String> health() {
-        return ResponseEntity.ok("OK");
+    public String health() {
+        return "forward:/";
     }
 }
 
