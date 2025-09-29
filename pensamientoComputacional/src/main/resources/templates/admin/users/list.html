@@ -1,62 +1,271 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/base}">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Usuarios</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-    </head>
+    <title>Gestión de Usuarios - Pensamiento Computacional ICESI</title>
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .role-badge {
+            font-size: 0.8em;
+        }
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .role-pill {
+            display: inline-flex;
+            align-items: center;
+            background-color: #e9ecef;
+            padding: 0.25rem 0.5rem;
+            border-radius: 1rem;
+            margin: 0.1rem;
+            font-size: 0.875rem;
+        }
+        .role-pill .remove-role {
+            border: none;
+            background: none;
+            color: #dc3545;
+            padding: 0 0.25rem;
+            margin-left: 0.25rem;
+            cursor: pointer;
+        }
+        .role-pill .remove-role:hover {
+            color: #bd2130;
+        }
+    </style>
+</head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="#">Admin</a>
-    <div class="d-flex">
-      <a class="btn btn-outline-light" th:href="@{/auth/logout}">Salir</a>
+    <div layout:fragment="content">
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3">
+            <h1 class="h2">
+                <i class="fas fa-users me-2"></i>
+                Gestión de Usuarios
+            </h1>
+            <div class="btn-toolbar mb-2 mb-md-0">
+                <a th:href="@{/admin/users/create}" class="btn btn-primary">
+                    <i class="fas fa-user-plus me-1"></i>
+                    Nuevo Usuario
+                </a>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form th:action="@{/admin/users}" method="get" class="row g-3">
+                    <!-- Search -->
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" class="form-control" 
+                                   placeholder="Buscar por nombre o correo"
+                                   name="search" th:value="${param.search}">
+                        </div>
+                    </div>
+                    
+                    <!-- Role Filter -->
+                    <div class="col-md-3">
+                        <select class="form-select" name="role">
+                            <option value="">Todos los roles</option>
+                            <option th:each="r : ${allRoles}"
+                                    th:value="${r.id}"
+                                    th:text="${r.name}"
+                                    th:selected="${param.role == r.id}">
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Group Filter -->
+                    <div class="col-md-3">
+                        <select class="form-select" name="group">
+                            <option value="">Todos los grupos</option>
+                            <option value="G1" th:selected="${param.group == 'G1'}">G1</option>
+                            <option value="G3" th:selected="${param.group == 'G3'}">G3</option>
+                            <option value="G5" th:selected="${param.group == 'G5'}">G5</option>
+                            <option value="G7" th:selected="${param.group == 'G7'}">G7</option>
+                        </select>
+                    </div>
+
+                    <!-- Filter Button -->
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-filter me-1"></i> Filtrar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Correo</th>
+                                <th>Roles</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="u : ${users}">
+                                <!-- User Info -->
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-user-circle me-2 fs-4"></i>
+                                        <div>
+                                            <div th:text="${u.name}">John Doe</div>
+                                            <small class="text-muted" th:text="${u.group}">G1</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                
+                                <!-- Email -->
+                                <td th:text="${u.email}">john@example.com</td>
+                                
+                                <!-- Roles -->
+                                <td>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <div th:each="r : ${u.roles}" class="role-pill">
+                                            <span th:text="${r.name}">Role</span>
+                                            <form th:action="@{'/admin/users/' + ${u.id} + '/remove-role'}" 
+                                                  method="post" class="d-inline">
+                                                <input type="hidden" name="roleId" th:value="${r.id}" />
+                                                <button type="submit" class="remove-role" 
+                                                        title="Eliminar rol">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                        <!-- Add Role Form -->
+                                        <form th:action="@{'/admin/users/' + ${u.id} + '/add-role'}" 
+                                              method="post" class="d-inline-flex">
+                                            <select class="form-select form-select-sm" 
+                                                    name="roleId" style="width: 120px;">
+                                                <option value="">Agregar rol</option>
+                                                <option th:each="r : ${allRoles}" 
+                                                        th:value="${r.id}" 
+                                                        th:text="${r.name}"></option>
+                                            </select>
+                                            <button type="submit" class="btn btn-sm btn-outline-primary ms-1">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                                
+                                <!-- Status -->
+                                <td>
+                                    <span th:if="${u.enabled}" class="badge bg-success">
+                                        <i class="fas fa-check-circle"></i> Activo
+                                    </span>
+                                    <span th:unless="${u.enabled}" class="badge bg-danger">
+                                        <i class="fas fa-times-circle"></i> Inactivo
+                                    </span>
+                                </td>
+                                
+                                <!-- Actions -->
+                                <td>
+                                    <div class="btn-group">
+                                        <a th:href="@{'/admin/users/' + ${u.id} + '/edit'}" 
+                                           class="btn btn-sm btn-outline-primary"
+                                           title="Editar usuario">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-danger"
+                                                data-bs-toggle="modal"
+                                                th:data-bs-target="${'#deleteModal' + u.id}"
+                                                title="Eliminar usuario">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+
+                                    <!-- Delete Modal -->
+                                    <div class="modal fade" th:id="${'deleteModal' + u.id}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Confirmar eliminación</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p>¿Estás seguro de que deseas eliminar al usuario 
+                                                        <strong th:text="${u.name}">John Doe</strong>?</p>
+                                                    <p class="text-danger">
+                                                        <i class="fas fa-exclamation-triangle"></i>
+                                                        Esta acción no se puede deshacer.
+                                                    </p>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                        Cancelar
+                                                    </button>
+                                                    <form th:action="@{'/admin/users/' + ${u.id} + '/delete'}" 
+                                                          method="post" style="display: inline;">
+                                                        <button type="submit" class="btn btn-danger">
+                                                            <i class="fas fa-trash me-1"></i> Eliminar
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Empty State -->
+                            <tr th:if="${#lists.isEmpty(users)}">
+                                <td colspan="5" class="text-center py-4">
+                                    <div class="text-muted">
+                                        <i class="fas fa-users fa-3x mb-3"></i>
+                                        <p>No se encontraron usuarios</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <nav th:if="${totalPages > 1}" aria-label="Page navigation" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                            <a class="page-link" th:href="@{/admin/users(page=${currentPage - 1})}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                        
+                        <li class="page-item" th:each="pageNum : ${#numbers.sequence(0, totalPages - 1)}"
+                            th:classappend="${pageNum == currentPage} ? 'active'">
+                            <a class="page-link" th:href="@{/admin/users(page=${pageNum})}"
+                               th:text="${pageNum + 1}">1</a>
+                        </li>
+                        
+                        <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
+                            <a class="page-link" th:href="@{/admin/users(page=${currentPage + 1})}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
     </div>
-  </div>
-  </nav>
-
-<div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Usuarios</h2>
-    <a class="btn btn-primary" th:href="@{/admin/users/create}">Crear usuario</a>
-  </div>
-  <table class="table table-striped">
-    <thead>
-      <tr>
-        <th>ID</th><th>Nombre</th><th>Correo</th><th>Roles</th><th>Acciones</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr th:each="u : ${users}">
-        <td th:text="${u.id}"></td>
-        <td th:text="${u.name}"></td>
-        <td th:text="${u.email}"></td>
-        <td>
-          <span class="badge bg-secondary me-1" th:each="r : ${u.roles}" th:text="${r.name}"></span>
-          <form th:each="r : ${u.roles}" th:action="@{'/admin/users/' + ${u.id} + '/remove-role'}" method="post" class="d-inline ms-1">
-            <input type="hidden" name="roleId" th:value="${r.id}" />
-            <button class="btn btn-sm btn-outline-danger">x</button>
-          </form>
-        </td>
-        <td class="d-flex gap-1">
-          <form th:action="@{'/admin/users/' + ${u.id} + '/delete'}" method="post" class="d-inline">
-            <button class="btn btn-sm btn-danger" type="submit">Eliminar</button>
-          </form>
-          <form th:action="@{'/admin/users/' + ${u.id} + '/add-role'}" method="post" class="d-inline d-flex gap-1">
-            <select class="form-select form-select-sm" name="roleId" style="width: 150px;">
-              <option th:each="r : ${allRoles}" th:value="${r.id}" th:text="${r.name}"></option>
-            </select>
-            <button class="btn btn-sm btn-outline-primary" type="submit">Agregar rol</button>
-          </form>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
 
