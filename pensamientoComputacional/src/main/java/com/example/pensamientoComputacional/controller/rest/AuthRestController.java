@@ -4,6 +4,8 @@ import com.example.pensamientoComputacional.mapper.UserMapper;
 import com.example.pensamientoComputacional.model.dto.LoginRequest;
 import com.example.pensamientoComputacional.model.dto.LoginResponse;
 import com.example.pensamientoComputacional.model.dto.RegisterRequest;
+import com.example.pensamientoComputacional.model.dto.TokenRefreshRequest;
+import com.example.pensamientoComputacional.model.dto.TokenRefreshResponse;
 import com.example.pensamientoComputacional.model.dto.UserDto;
 import com.example.pensamientoComputacional.model.entities.User;
 import com.example.pensamientoComputacional.security.JwtTokenProvider;
@@ -54,8 +56,11 @@ public class AuthRestController {
             User user = userService.findByEmail(loginRequest.getEmail());
             String token = tokenProvider.generateToken(user);
             
+            String refreshToken = tokenProvider.generateRefreshToken(user);
+            
             LoginResponse response = new LoginResponse();
             response.setToken(token);
+            response.setRefreshToken(refreshToken);
             response.setUser(userMapper.entityToDto(user));
             response.setExpiresIn(86400000L); // 24 hours in milliseconds
             
@@ -86,6 +91,37 @@ public class AuthRestController {
     public ResponseEntity<Void> logout() {
         SecurityContextHolder.clearContext();
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<TokenRefreshResponse> refreshToken(@Valid @RequestBody TokenRefreshRequest refreshRequest) {
+        try {
+            String refreshToken = refreshRequest.getRefreshToken();
+            
+            if (!tokenProvider.validateToken(refreshToken) || !tokenProvider.isRefreshToken(refreshToken)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+            
+            String email = tokenProvider.getUserEmailFromToken(refreshToken);
+            User user = userService.findByEmail(email);
+            
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+            
+            String newAccessToken = tokenProvider.generateToken(user);
+            String newRefreshToken = tokenProvider.generateRefreshToken(user);
+            
+            TokenRefreshResponse response = new TokenRefreshResponse(
+                newAccessToken, 
+                newRefreshToken, 
+                86400000L // 24 hours in milliseconds
+            );
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
     }
 
     @GetMapping("/me")

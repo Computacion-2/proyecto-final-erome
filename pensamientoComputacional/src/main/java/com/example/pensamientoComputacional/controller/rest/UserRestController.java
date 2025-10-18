@@ -3,6 +3,8 @@ package com.example.pensamientoComputacional.controller.rest;
 import com.example.pensamientoComputacional.mapper.UserMapper;
 import com.example.pensamientoComputacional.model.dto.UserDto;
 import com.example.pensamientoComputacional.model.entities.User;
+import com.example.pensamientoComputacional.security.RequirePermission;
+import com.example.pensamientoComputacional.security.RequireRole;
 import com.example.pensamientoComputacional.service.IUserService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -86,5 +88,17 @@ public class UserRestController {
                 .map(userMapper::entityToDto)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(userDtos);
+    }
+
+    @GetMapping("/admin-only")
+    @RequireRole({"ADMIN"})
+    public ResponseEntity<String> adminOnlyEndpoint() {
+        return ResponseEntity.ok("This endpoint is only accessible to ADMIN users");
+    }
+
+    @GetMapping("/permission-required")
+    @RequirePermission({"READ_USER"})
+    public ResponseEntity<String> permissionRequiredEndpoint() {
+        return ResponseEntity.ok("This endpoint requires READ_USER permission");
     }
 }
