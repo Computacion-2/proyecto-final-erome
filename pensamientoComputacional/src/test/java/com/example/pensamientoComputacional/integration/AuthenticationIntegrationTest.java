@@ -88,15 +88,12 @@ class AuthenticationIntegrationTest extends TestBase {
         request.setName("New User");
         request.setEmail("new.user@u.icesi.edu.co");
         request.setPassword("password123");
-        request.setGroup("G1");
-
         mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value(request.getEmail()))
-                .andExpect(jsonPath("$.name").value(request.getName()))
-                .andExpect(jsonPath("$.group").value(request.getGroup()));
+                .andExpect(jsonPath("$.name").value(request.getName()));
     }
 
     @Test
@@ -105,7 +102,6 @@ class AuthenticationIntegrationTest extends TestBase {
         request.setName("New User");
         request.setEmail("invalid@gmail.com");
         request.setPassword("password123");
-        request.setGroup("G1");
 
         mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
