@@ -2,22 +2,27 @@ package com.example.pensamientoComputacional.model.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class RegisterRequest {
-    @NotBlank(message = "El nombre es requerido")
+    
+    @NotBlank(message = "Name is required")
+    @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")
     private String name;
-
-    @NotBlank(message = "El email es requerido")
-    @Email(message = "El email debe ser válido")
-    @Pattern(regexp = ".*@u\\.icesi\\.edu\\.co$", message = "El email debe ser de dominio u.icesi.edu.co")
+    
+    @NotBlank(message = "Email is required")
+    @Email(message = "Email should be valid")
     private String email;
-
-    @NotBlank(message = "La contraseña es requerida")
+    
+    @NotBlank(message = "Password is required")
+    @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
-
-    @NotBlank(message = "El grupo es requerido")
-    private String group;
+    
+    private String role = "STUDENT"; // Default role
 }
