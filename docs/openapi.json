@@ -1,0 +1,658 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Pensamiento Computacional API",
+    "version": "v1.0.0",
+    "description": "API REST para la gestión educativa y ejercicios de Pensamiento Computacional",
+    "contact": {
+      "name": "Equipo de Desarrollo",
+      "email": "dev@u.icesi.edu.co",
+      "url": "https://www.icesi.edu.co"
+    },
+    "license": {
+      "name": "MIT License",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080/pensamientoComputacional-0.0.1-SNAPSHOT",
+      "description": "Servidor de desarrollo local"
+    },
+    {
+      "url": "http://x104m10:8080/pensamientoComputacional-0.0.1-SNAPSHOT",
+      "description": "Servidor de producción"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Iniciar sesión",
+        "description": "Autentica un usuario y retorna tokens JWT",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login exitoso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Credenciales inválidas"
+          },
+          "400": {
+            "description": "Datos de entrada inválidos"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Registrar usuario",
+        "description": "Registra un nuevo usuario en el sistema",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuario registrado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos o usuario ya existe"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Renovar token",
+        "description": "Renueva el token de acceso usando el refresh token",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRefreshRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token renovado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenRefreshResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refresh token inválido o expirado"
+          },
+          "400": {
+            "description": "Datos de entrada inválidos"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Cerrar sesión",
+        "description": "Cierra la sesión del usuario actual",
+        "responses": {
+          "200": {
+            "description": "Logout exitoso"
+          },
+          "401": {
+            "description": "No autorizado"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": ["Authentication"],
+        "summary": "Obtener usuario actual",
+        "description": "Obtiene la información del usuario autenticado",
+        "responses": {
+          "200": {
+            "description": "Usuario obtenido exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autorizado"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      }
+    },
+    "/api/test": {
+      "get": {
+        "tags": ["Test"],
+        "summary": "Verificar estado de la API",
+        "description": "Endpoint de prueba para verificar que la API está funcionando correctamente",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "API funcionando correctamente",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "REST API is working!"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      }
+    },
+    "/api/users": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Obtener todos los usuarios",
+        "description": "Retorna una lista de todos los usuarios del sistema",
+        "responses": {
+          "200": {
+            "description": "Lista de usuarios obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autorizado"
+          },
+          "403": {
+            "description": "Sin permisos suficientes"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Users"],
+        "summary": "Crear usuario",
+        "description": "Crea un nuevo usuario en el sistema",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuario creado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos"
+          },
+          "401": {
+            "description": "No autorizado"
+          },
+          "403": {
+            "description": "Sin permisos suficientes"
+          },
+          "409": {
+            "description": "Usuario ya existe"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      }
+    },
+    "/api/users/{id}": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Obtener usuario por ID",
+        "description": "Retorna la información de un usuario específico",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID del usuario",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usuario encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autorizado"
+          },
+          "403": {
+            "description": "Sin permisos suficientes"
+          },
+          "404": {
+            "description": "Usuario no encontrado"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      },
+      "put": {
+        "tags": ["Users"],
+        "summary": "Actualizar usuario",
+        "description": "Actualiza la información de un usuario existente",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID del usuario",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Usuario actualizado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos"
+          },
+          "401": {
+            "description": "No autorizado"
+          },
+          "403": {
+            "description": "Sin permisos suficientes"
+          },
+          "404": {
+            "description": "Usuario no encontrado"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Users"],
+        "summary": "Eliminar usuario",
+        "description": "Elimina un usuario del sistema",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID del usuario",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Usuario eliminado exitosamente"
+          },
+          "401": {
+            "description": "No autorizado"
+          },
+          "403": {
+            "description": "Sin permisos suficientes"
+          },
+          "404": {
+            "description": "Usuario no encontrado"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      }
+    },
+    "/api/users/role/{roleId}": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Obtener usuarios por rol",
+        "description": "Retorna una lista de usuarios que tienen un rol específico",
+        "parameters": [
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "description": "ID del rol",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de usuarios obtenida exitosamente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autorizado"
+          },
+          "403": {
+            "description": "Sin permisos suficientes"
+          },
+          "500": {
+            "description": "Error interno del servidor"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token obtenido del endpoint /api/auth/login"
+      }
+    },
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email del usuario"
+          },
+          "password": {
+            "type": "string",
+            "description": "Contraseña del usuario"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Token de acceso JWT"
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Token de renovación JWT"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserDto"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Tiempo de expiración en milisegundos"
+          }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["name", "email", "password", "role"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre del usuario"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email del usuario"
+          },
+          "password": {
+            "type": "string",
+            "description": "Contraseña del usuario"
+          },
+          "role": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "integer",
+                "format": "int64",
+                "description": "ID del rol"
+              }
+            }
+          }
+        }
+      },
+      "TokenRefreshRequest": {
+        "type": "object",
+        "required": ["refreshToken"],
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "Token de renovación"
+          }
+        }
+      },
+      "TokenRefreshResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Nuevo token de acceso JWT"
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Nuevo token de renovación JWT"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Tiempo de expiración en milisegundos"
+          }
+        }
+      },
+      "UserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "ID único del usuario"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del usuario"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email del usuario"
+          },
+          "passwordHash": {
+            "type": "string",
+            "description": "Hash de la contraseña"
+          },
+          "photoUrl": {
+            "type": "string",
+            "description": "URL de la foto del usuario"
+          },
+          "group": {
+            "type": "string",
+            "description": "Grupo del usuario"
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Estado activo del usuario"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creación"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoleDto"
+            },
+            "description": "Roles del usuario"
+          }
+        }
+      },
+      "RoleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "ID único del rol"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del rol"
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripción del rol"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PermissionDto"
+            },
+            "description": "Permisos del rol"
+          }
+        }
+      },
+      "PermissionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "ID único del permiso"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del permiso"
+          },
+          "description": {
+            "type": "string",
+            "description": "Descripción del permiso"
+          }
+        }
+      }
+    }
+  }
+}
+

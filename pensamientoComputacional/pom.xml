@@ -112,6 +112,12 @@
             <version>1.5.5.Final</version>
             <scope>provided</scope>
         </dependency>
+        <!-- SpringDoc OpenAPI for Swagger documentation -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.5.0</version>
+        </dependency>
     </dependencies>
     
     <build>
@@ -184,6 +190,24 @@
 									</limits>
 								</rule>
 							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- SpringDoc OpenAPI Maven Plugin -->
+			<plugin>
+				<groupId>org.springdoc</groupId>
+				<artifactId>springdoc-openapi-maven-plugin</artifactId>
+				<version>1.4</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>generate</goal>
+						</goals>
+						<configuration>
+							<apiDocsUrl>http://localhost:8080/pensamientoComputacional-0.0.1-SNAPSHOT/api-docs</apiDocsUrl>
+							<outputFileName>openapi.json</outputFileName>
+							<outputDir>${project.basedir}/docs</outputDir>
 						</configuration>
 					</execution>
 				</executions>

@@ -1,0 +1,1546 @@
+{
+	"info": {
+		"_postman_id": "pc-api-collection",
+		"name": "Pensamiento Computacional API",
+		"description": "Colección completa de pruebas para la API de Pensamiento Computacional",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Auto-login if no token or token expired",
+									"const accessToken = pm.environment.get('accessToken');",
+									"if (!accessToken) {",
+									"    console.log('No access token found, proceeding with login');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response has required fields', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('token');",
+									"    pm.expect(response).to.have.property('refreshToken');",
+									"    pm.expect(response).to.have.property('user');",
+									"    pm.expect(response).to.have.property('expiresIn');",
+									"});",
+									"",
+									"pm.test('Save tokens to environment', () => {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('accessToken', response.token);",
+									"    pm.environment.set('refreshToken', response.refreshToken);",
+									"    pm.environment.set('userId', response.user.id);",
+									"    console.log('Tokens saved to environment');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{adminUser}}\",\n    \"password\": \"{{adminPass}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login endpoint to get JWT tokens"
+					},
+					"response": []
+				},
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status Created', () => {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response has user fields', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('id');",
+									"    pm.expect(response).to.have.property('name');",
+									"    pm.expect(response).to.have.property('email');",
+									"});",
+									"",
+									"pm.test('Save new user ID', () => {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('newUserId', response.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Test User\",\n    \"email\": \"testuser@example.com\",\n    \"password\": \"password123\",\n    \"role\": {\n        \"id\": 3\n    }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Register a new user"
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response has new tokens', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('accessToken');",
+									"    pm.expect(response).to.have.property('refreshToken');",
+									"});",
+									"",
+									"pm.test('Update tokens in environment', () => {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('accessToken', response.accessToken);",
+									"    pm.environment.set('refreshToken', response.refreshToken);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/refresh",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"refresh"
+							]
+						},
+						"description": "Refresh JWT token"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response has user fields', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('id');",
+									"    pm.expect(response).to.have.property('name');",
+									"    pm.expect(response).to.have.property('email');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
+						},
+						"description": "Get current authenticated user"
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Clear tokens from environment', () => {",
+									"    pm.environment.unset('accessToken');",
+									"    pm.environment.unset('refreshToken');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/logout",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						},
+						"description": "Logout user"
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints"
+		},
+		{
+			"name": "Test",
+			"item": [
+				{
+					"name": "API Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response time is reasonable', () => {",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response contains expected text', () => {",
+									"    pm.expect(pm.response.text()).to.include('REST API is working');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/test",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"test"
+							]
+						},
+						"description": "Test endpoint to verify API is working"
+					},
+					"response": []
+				}
+			],
+			"description": "Test endpoints"
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get All Users",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response is array', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.be.an('array');",
+									"});",
+									"",
+									"pm.test('Users have required fields', () => {",
+									"    const response = pm.response.json();",
+									"    if (response.length > 0) {",
+									"        pm.expect(response[0]).to.have.property('id');",
+									"        pm.expect(response[0]).to.have.property('name');",
+									"        pm.expect(response[0]).to.have.property('email');",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "Get all users"
+					},
+					"response": []
+				},
+				{
+					"name": "Create User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status Created', () => {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response has user fields', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('id');",
+									"    pm.expect(response).to.have.property('name');",
+									"    pm.expect(response).to.have.property('email');",
+									"});",
+									"",
+									"pm.test('Save created user ID', () => {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('createdUserId', response.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"New Test User\",\n    \"email\": \"newtest@example.com\",\n    \"passwordHash\": \"$2a$10$xn3LI/AjqicFYZFruSwve.277PhWg4QrPx8LoC/uu2M1xf0QCqZu.\",\n    \"isActive\": true,\n    \"roles\": [\n        {\n            \"id\": 3\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "Create a new user"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response has user fields', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('id');",
+									"    pm.expect(response).to.have.property('name');",
+									"    pm.expect(response).to.have.property('email');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{userId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{userId}}"
+							]
+						},
+						"description": "Get user by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response has updated user fields', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('id');",
+									"    pm.expect(response).to.have.property('name');",
+									"    pm.expect(response.name).to.eql('Updated Test User');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": {{createdUserId}},\n    \"name\": \"Updated Test User\",\n    \"email\": \"updatedtest@example.com\",\n    \"passwordHash\": \"$2a$10$xn3LI/AjqicFYZFruSwve.277PhWg4QrPx8LoC/uu2M1xf0QCqZu.\",\n    \"isActive\": true,\n    \"roles\": [\n        {\n            \"id\": 3\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{createdUserId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{createdUserId}}"
+							]
+						},
+						"description": "Update user"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Users by Role",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response is array', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/role/{{roleId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"role",
+								"{{roleId}}"
+							]
+						},
+						"description": "Get users by role ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status No Content', () => {",
+									"    pm.response.to.have.status(204);",
+									"});",
+									"",
+									"pm.test('Response time is reasonable', () => {",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{createdUserId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{createdUserId}}"
+							]
+						},
+						"description": "Delete user"
+					},
+					"response": []
+				}
+			],
+			"description": "User management endpoints"
+		},
+		{
+			"name": "Roles",
+			"item": [
+				{
+					"name": "Get All Roles",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response is array', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.be.an('array');",
+									"});",
+									"",
+									"pm.test('Roles have required fields', () => {",
+									"    const response = pm.response.json();",
+									"    if (response.length > 0) {",
+									"        pm.expect(response[0]).to.have.property('id');",
+									"        pm.expect(response[0]).to.have.property('name');",
+									"        pm.expect(response[0]).to.have.property('description');",
+									"    }",
+									"});",
+									"",
+									"pm.test('Save first role ID', () => {",
+									"    const response = pm.response.json();",
+									"    if (response.length > 0) {",
+									"        pm.environment.set('roleId', response[0].id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/roles",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"roles"
+							]
+						},
+						"description": "Get all roles"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Role",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status Created', () => {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response has role fields', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('id');",
+									"    pm.expect(response).to.have.property('name');",
+									"    pm.expect(response).to.have.property('description');",
+									"});",
+									"",
+									"pm.test('Save created role ID', () => {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('createdRoleId', response.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"TEST_ROLE\",\n    \"description\": \"Test role for API testing\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/roles",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"roles"
+							]
+						},
+						"description": "Create a new role"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Role by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response has role fields', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('id');",
+									"    pm.expect(response).to.have.property('name');",
+									"    pm.expect(response).to.have.property('description');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/roles/{{roleId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"roles",
+								"{{roleId}}"
+							]
+						},
+						"description": "Get role by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Role",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response has updated role fields', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('id');",
+									"    pm.expect(response).to.have.property('name');",
+									"    pm.expect(response.description).to.eql('Updated test role');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": {{createdRoleId}},\n    \"name\": \"TEST_ROLE\",\n    \"description\": \"Updated test role\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/roles/{{createdRoleId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"roles",
+								"{{createdRoleId}}"
+							]
+						},
+						"description": "Update role"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Role",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status No Content', () => {",
+									"    pm.response.to.have.status(204);",
+									"});",
+									"",
+									"pm.test('Response time is reasonable', () => {",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/roles/{{createdRoleId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"roles",
+								"{{createdRoleId}}"
+							]
+						},
+						"description": "Delete role"
+					},
+					"response": []
+				}
+			],
+			"description": "Role management endpoints"
+		},
+		{
+			"name": "Students",
+			"item": [
+				{
+					"name": "Get All Students",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response is array', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.be.an('array');",
+									"});",
+									"",
+									"pm.test('Students have required fields', () => {",
+									"    const response = pm.response.json();",
+									"    if (response.length > 0) {",
+									"        pm.expect(response[0]).to.have.property('id');",
+									"        pm.expect(response[0]).to.have.property('user');",
+									"    }",
+									"});",
+									"",
+									"pm.test('Save first student ID', () => {",
+									"    const response = pm.response.json();",
+									"    if (response.length > 0) {",
+									"        pm.environment.set('studentId', response[0].id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/students",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"students"
+							]
+						},
+						"description": "Get all students"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Student",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status Created', () => {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response has student fields', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('id');",
+									"    pm.expect(response).to.have.property('user');",
+									"});",
+									"",
+									"pm.test('Save created student ID', () => {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('createdStudentId', response.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": {{newUserId}},\n    \"user\": {\n        \"id\": {{newUserId}},\n        \"name\": \"Test Student\",\n        \"email\": \"teststudent@example.com\",\n        \"passwordHash\": \"$2a$10$xn3LI/AjqicFYZFruSwve.277PhWg4QrPx8LoC/uu2M1xf0QCqZu.\",\n        \"isActive\": true,\n        \"roles\": [\n            {\n                \"id\": 3\n            }\n        ]\n    },\n    \"initialProfile\": \"BEGINNER\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/students",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"students"
+							]
+						},
+						"description": "Create a new student"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Student by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response has student fields', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('id');",
+									"    pm.expect(response).to.have.property('user');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/students/{{studentId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"students",
+								"{{studentId}}"
+							]
+						},
+						"description": "Get student by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Student",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response has updated student fields', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('id');",
+									"    pm.expect(response).to.have.property('user');",
+									"    pm.expect(response.initialProfile).to.eql('INTERMEDIATE');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": {{createdStudentId}},\n    \"user\": {\n        \"id\": {{newUserId}},\n        \"name\": \"Updated Test Student\",\n        \"email\": \"updatedteststudent@example.com\",\n        \"passwordHash\": \"$2a$10$xn3LI/AjqicFYZFruSwve.277PhWg4QrPx8LoC/uu2M1xf0QCqZu.\",\n        \"isActive\": true,\n        \"roles\": [\n            {\n                \"id\": 3\n            }\n        ]\n    },\n    \"initialProfile\": \"INTERMEDIATE\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/students/{{createdStudentId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"students",
+								"{{createdStudentId}}"
+							]
+						},
+						"description": "Update student"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Student",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status No Content', () => {",
+									"    pm.response.to.have.status(204);",
+									"});",
+									"",
+									"pm.test('Response time is reasonable', () => {",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/students/{{createdStudentId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"students",
+								"{{createdStudentId}}"
+							]
+						},
+						"description": "Delete student"
+					},
+					"response": []
+				}
+			],
+			"description": "Student management endpoints"
+		},
+		{
+			"name": "Permissions",
+			"item": [
+				{
+					"name": "Get All Permissions",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response is array', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.be.an('array');",
+									"});",
+									"",
+									"pm.test('Permissions have required fields', () => {",
+									"    const response = pm.response.json();",
+									"    if (response.length > 0) {",
+									"        pm.expect(response[0]).to.have.property('id');",
+									"        pm.expect(response[0]).to.have.property('name');",
+									"        pm.expect(response[0]).to.have.property('description');",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/permissions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"permissions"
+							]
+						},
+						"description": "Get all permissions"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Permission by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response has permission fields', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('id');",
+									"    pm.expect(response).to.have.property('name');",
+									"    pm.expect(response).to.have.property('description');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/permissions/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"permissions",
+								"1"
+							]
+						},
+						"description": "Get permission by ID"
+					},
+					"response": []
+				}
+			],
+			"description": "Permission management endpoints"
+		},
+		{
+			"name": "Semesters",
+			"item": [
+				{
+					"name": "Get All Semesters",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response is array', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.be.an('array');",
+									"});",
+									"",
+									"pm.test('Semesters have required fields', () => {",
+									"    const response = pm.response.json();",
+									"    if (response.length > 0) {",
+									"        pm.expect(response[0]).to.have.property('id');",
+									"        pm.expect(response[0]).to.have.property('code');",
+									"        pm.expect(response[0]).to.have.property('startDate');",
+									"        pm.expect(response[0]).to.have.property('endDate');",
+									"    }",
+									"});",
+									"",
+									"pm.test('Save first semester ID', () => {",
+									"    const response = pm.response.json();",
+									"    if (response.length > 0) {",
+									"        pm.environment.set('semesterId', response[0].id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/semesters",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"semesters"
+							]
+						},
+						"description": "Get all semesters"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Active Semesters",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response is array', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/semesters/active",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"semesters",
+								"active"
+							]
+						},
+						"description": "Get active semesters"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Semester by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status OK', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('JSON response and reasonable time', () => {",
+									"    pm.response.to.be.json;",
+									"    pm.expect(pm.response.responseTime).to.be.below(1500);",
+									"});",
+									"",
+									"pm.test('Response has semester fields', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response).to.have.property('id');",
+									"    pm.expect(response).to.have.property('code');",
+									"    pm.expect(response).to.have.property('startDate');",
+									"    pm.expect(response).to.have.property('endDate');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/semesters/{{semesterId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"semesters",
+								"{{semesterId}}"
+							]
+						},
+						"description": "Get semester by ID"
+					},
+					"response": []
+				}
+			],
+			"description": "Semester management endpoints"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global pre-request script",
+					"console.log('Running request to: ' + pm.request.url);"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Global test script",
+					"pm.test('Response time is reasonable', () => {",
+					"    pm.expect(pm.response.responseTime).to.be.below(5000);",
+					"});"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080/pensamientoComputacional-0.0.1-SNAPSHOT",
+			"type": "string"
+		}
+	]
+}
+
+
+

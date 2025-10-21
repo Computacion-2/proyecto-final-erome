@@ -1,0 +1,26 @@
+{
+  "name": "pensamiento-computacional-api-tests",
+  "version": "1.0.0",
+  "description": "API tests for Pensamiento Computacional using Newman",
+  "scripts": {
+    "api:test": "newman run postman/pc-api.postman_collection.json -e postman/local.postman_environment.json -r htmlextra --reporter-htmlextra-export postman/report.html --insecure",
+    "api:test:server": "newman run postman/pc-api.postman_collection.json -e postman/server.postman_environment.json -r htmlextra --reporter-htmlextra-export postman/report.html --insecure",
+    "api:test:verbose": "newman run postman/pc-api.postman_collection.json -e postman/local.postman_environment.json -r htmlextra --reporter-htmlextra-export postman/report.html --insecure --verbose"
+  },
+  "devDependencies": {
+    "newman": "^6.0.0",
+    "newman-reporter-htmlextra": "^1.23.0"
+  },
+  "keywords": [
+    "api",
+    "testing",
+    "postman",
+    "newman",
+    "spring-boot"
+  ],
+  "author": "Senior Engineer",
+  "license": "MIT"
+}
+
+
+

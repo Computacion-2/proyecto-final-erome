@@ -118,7 +118,7 @@ export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw test -Dspring.profiles.a
 
 ### Test Results
 - **Total Tests**: 116 tests
-- **Status**: ✅ All tests passing
+- **Status**: All tests passing
 - **Coverage**: Available in `target/site/jacoco/index.html`
 
 ### Test Coverage
@@ -134,6 +134,282 @@ The project includes comprehensive unit tests for all services:
 After running tests with JaCoCo, the coverage report is available at:
 ```
 target/site/jacoco/index.html
+```
+
+## API Testing with Postman
+
+### Prerequisites
+- Node.js (for Newman)
+- Application running (local or server)
+
+### Setup
+```bash
+# Install Newman and dependencies
+npm install
+
+# Ensure application is running
+# Local: http://localhost:8080/pensamientoComputacional-0.0.1-SNAPSHOT/
+# Server: http://x104m10:8080/pensamientoComputacional-0.0.1-SNAPSHOT/
+```
+
+### Running API Tests
+
+```bash
+# Test against local environment
+npm run api:test
+
+# Test against server environment
+npm run api:test:server
+
+# Test with verbose output
+npm run api:test:verbose
+```
+
+### Test Collection Structure
+
+The Postman collection (`postman/pc-api.postman_collection.json`) includes:
+
+- **Auth**: Login, Register, Refresh Token, Get Current User, Logout
+- **Test**: API Health Check
+- **Users**: Full CRUD operations for user management
+- **Roles**: Full CRUD operations for role management
+- **Students**: Full CRUD operations for student management
+- **Permissions**: Read operations for permission management
+- **Semesters**: Read operations for semester management
+
+### Test Coverage
+
+- **Total Requests**: 25
+- **Total Tests**: 75
+- **Coverage**: 100% of REST endpoints
+- **Validation**: Status codes, response times, schema validation, environment variables
+
+### Test Report
+
+After running tests, a detailed HTML report is generated at:
+```
+postman/report.html
+```
+
+### Environment Variables
+
+The collection uses environment variables for:
+- `baseUrl`: API base URL
+- `accessToken`/`refreshToken`: JWT tokens
+- `userId`, `roleId`, `studentId`, etc.: Runtime IDs
+- Credentials: Admin, Professor, Student credentials
+
+### Manual Testing
+
+You can also import the collection into Postman:
+1. Import `postman/pc-api.postman_collection.json`
+2. Import `postman/local.postman_environment.json` or `postman/server.postman_environment.json`
+3. Run the collection manually
+
+## API Documentation (Swagger)
+
+### Swagger UI
+
+The application provides interactive API documentation through Swagger UI:
+
+- **Local**: http://localhost:8080/pensamientoComputacional-0.0.1-SNAPSHOT/swagger-ui
+- **Server**: http://x104m10:8080/pensamientoComputacional-0.0.1-SNAPSHOT/swagger-ui
+
+### OpenAPI Contract
+
+The OpenAPI specification is available at:
+
+- **Local**: http://localhost:8080/pensamientoComputacional-0.0.1-SNAPSHOT/api-docs
+- **Server**: http://x104m10:8080/pensamientoComputacional-0.0.1-SNAPSHOT/api-docs
+
+### Generated Contract
+
+A static OpenAPI contract is generated during build and available at:
+```
+docs/openapi.json
+```
+
+### Features
+
+- **Interactive Documentation**: Test API endpoints directly from the browser
+- **JWT Authentication**: Authorize requests using Bearer tokens
+- **Complete Coverage**: All REST endpoints documented with request/response schemas
+- **Error Documentation**: Comprehensive error response documentation
+- **Security Documentation**: JWT authentication flow documented
+
+### Usage
+
+1. **Access Swagger UI**: Navigate to the Swagger UI URL
+2. **Authorize**: Click "Authorize" and enter your JWT token (obtained from `/api/auth/login`)
+3. **Test Endpoints**: Use the "Try it out" feature to test API endpoints
+4. **View Schemas**: Explore request/response schemas for all endpoints
+
+### API Endpoints Documented
+
+- **Authentication**: Login, Register, Refresh Token, Logout, Get Current User
+- **Users**: Full CRUD operations with role-based access
+- **Roles**: Role management with permissions
+- **Students**: Student management and enrollment
+- **Permissions**: Permission management
+- **Semesters**: Semester management
+- **Test**: Health check endpoint
+
+## Ejecución de Pruebas API - Punto 3
+
+### Prerrequisitos
+```bash
+# Instalar Node.js y npm (si no están instalados)
+# Descargar desde: https://nodejs.org/
+
+# Verificar instalación
+node --version
+npm --version
+```
+
+### Instalación de Dependencias
+```bash
+# Instalar Newman y reporter HTML
+npm install
+```
+
+### Ejecutar Pruebas Postman
+
+**Opción 1: Pruebas contra servidor desplegado**
+```bash
+npm run api:test:server
+```
+
+**Opción 2: Pruebas contra aplicación local**
+```bash
+# Primero iniciar la aplicación (ver sección siguiente)
+npm run api:test
+```
+
+**Opción 3: Pruebas con salida detallada**
+```bash
+npm run api:test:verbose
+```
+
+### Verificar Resultados
+```bash
+# El reporte se genera en:
+# postman/report.html
+
+# Abrir en navegador
+start postman/report.html
+```
+
+### Resultados Esperados - Punto 3
+- Colección ejecutada con Newman
+- Reporte HTML generado en `postman/report.html`
+- Tests ejecutados (pueden fallar si el servidor no está disponible)
+
+## Documentación API Swagger - Punto 5
+
+### Iniciar la Aplicación
+```bash
+# Navegar al directorio del proyecto
+cd pensamientoComputacional
+
+# Opción 1: Usar Maven Wrapper (recomendado)
+./mvnw spring-boot:run
+
+# Opción 2: Usar Maven directamente (si está instalado)
+mvn spring-boot:run
+```
+
+### Acceder a Swagger UI
+Una vez que la aplicación esté corriendo, abrir en el navegador:
+
+**Local:**
+```
+http://localhost:8080/pensamientoComputacional-0.0.1-SNAPSHOT/swagger-ui
+```
+
+**Servidor:**
+```
+http://x104m10:8080/pensamientoComputacional-0.0.1-SNAPSHOT/swagger-ui
+```
+
+### Verificar API Docs (JSON)
+```
+http://localhost:8080/pensamientoComputacional-0.0.1-SNAPSHOT/api-docs
+```
+
+### Generar Contrato OpenAPI Estático
+```bash
+# Con la aplicación corriendo
+mvn springdoc:generate
+
+# El contrato se genera en:
+# docs/openapi.json
+```
+
+### Verificar Archivos Generados
+```bash
+# Verificar que existe el contrato
+ls docs/openapi.json
+
+# Ver contenido del contrato
+cat docs/openapi.json
+```
+
+### Resultados Esperados - Punto 5
+- Aplicación iniciada en puerto 8080
+- Swagger UI accesible en `/swagger-ui`
+- API Docs accesible en `/api-docs`
+- Contrato generado en `docs/openapi.json`
+
+## Comandos de Verificación Rápida
+
+### Verificar que la aplicación está corriendo
+```bash
+# Test endpoint
+curl http://localhost:8080/pensamientoComputacional-0.0.1-SNAPSHOT/api/test
+
+# Respuesta esperada: "REST API is working!"
+```
+
+### Verificar Swagger UI
+```bash
+# Verificar que Swagger UI responde
+curl -I http://localhost:8080/pensamientoComputacional-0.0.1-SNAPSHOT/swagger-ui
+
+# Respuesta esperada: HTTP 200
+```
+
+### Verificar API Docs
+```bash
+# Verificar que API docs responde
+curl http://localhost:8080/pensamientoComputacional-0.0.1-SNAPSHOT/api-docs
+
+# Respuesta esperada: JSON con especificación OpenAPI
+```
+
+## Troubleshooting
+
+### Error: "No plugin found for prefix 'spring-boot'"
+```bash
+# Usar Maven Wrapper en lugar de Maven
+./mvnw spring-boot:run
+```
+
+### Error: "Cannot connect to server"
+```bash
+# Verificar que la aplicación esté corriendo
+netstat -an | findstr :8080
+
+# Verificar procesos Java
+jps -l
+```
+
+### Error: "Newman not found"
+```bash
+# Instalar dependencias
+npm install
+
+# Verificar instalación
+npx newman --version
 ```
 
 ## API Examples
