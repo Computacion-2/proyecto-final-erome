@@ -9,7 +9,7 @@ describe('Loading Component', () => {
   });
 
   it('renders with custom message', () => {
-    render(<Loading message="Cargando datos..." />);
+    render(<Loading message='Cargando datos...' />);
     expect(screen.getByText('Cargando datos...')).toBeInTheDocument();
   });
 

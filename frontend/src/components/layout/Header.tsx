@@ -13,7 +13,7 @@ import {
   useMediaQuery,
   Drawer,
   List,
-  ListItem,
+  ListItemButton,
   ListItemIcon,
   ListItemText,
 } from '@mui/material';
@@ -34,7 +34,7 @@ const Header: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  
+
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -67,38 +67,37 @@ const Header: React.FC = () => {
   const drawer = (
     <Box sx={{ width: 250 }}>
       <List>
-        {navigationItems.map((item) => (
-          <ListItem 
-            button 
+        {navigationItems.map(item => (
+          <ListItemButton
             key={item.path}
             onClick={() => handleNavigation(item.path)}
           >
             <ListItemIcon>{item.icon}</ListItemIcon>
             <ListItemText primary={item.label} />
-          </ListItem>
+          </ListItemButton>
         ))}
       </List>
     </Box>
   );
 
   return (
-    <AppBar position="static" elevation={2}>
+    <AppBar position='static' elevation={2}>
       <Toolbar>
         {isMobile && (
           <IconButton
-            edge="start"
-            color="inherit"
-            aria-label="menu"
+            edge='start'
+            color='inherit'
+            aria-label='menu'
             onClick={() => setMobileMenuOpen(true)}
             sx={{ mr: 2 }}
           >
             <MenuIcon />
           </IconButton>
         )}
-        
-        <Typography 
-          variant="h6" 
-          component="div" 
+
+        <Typography
+          variant='h6'
+          component='div'
           sx={{ flexGrow: 1, cursor: 'pointer' }}
           onClick={() => navigate('/')}
         >
@@ -107,10 +106,10 @@ const Header: React.FC = () => {
 
         {!isMobile && isAuthenticated && (
           <Box sx={{ display: 'flex', gap: 2, mr: 2 }}>
-            {navigationItems.map((item) => (
+            {navigationItems.map(item => (
               <Button
                 key={item.path}
-                color="inherit"
+                color='inherit'
                 onClick={() => navigate(item.path)}
                 startIcon={item.icon}
               >
@@ -123,12 +122,12 @@ const Header: React.FC = () => {
         {isAuthenticated ? (
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <IconButton
-              size="large"
-              aria-label="account of current user"
-              aria-controls="menu-appbar"
-              aria-haspopup="true"
+              size='large'
+              aria-label='account of current user'
+              aria-controls='menu-appbar'
+              aria-haspopup='true'
               onClick={handleMenuOpen}
-              color="inherit"
+              color='inherit'
             >
               {user?.photoUrl ? (
                 <Avatar src={user.photoUrl} sx={{ width: 32, height: 32 }} />
@@ -137,7 +136,7 @@ const Header: React.FC = () => {
               )}
             </IconButton>
             <Menu
-              id="menu-appbar"
+              id='menu-appbar'
               anchorEl={anchorEl}
               anchorOrigin={{
                 vertical: 'top',
@@ -151,7 +150,12 @@ const Header: React.FC = () => {
               open={Boolean(anchorEl)}
               onClose={handleMenuClose}
             >
-              <MenuItem onClick={() => { navigate('/profile'); handleMenuClose(); }}>
+              <MenuItem
+                onClick={() => {
+                  navigate('/profile');
+                  handleMenuClose();
+                }}
+              >
                 <AccountCircle sx={{ mr: 1 }} />
                 Perfil
               </MenuItem>
@@ -163,10 +167,10 @@ const Header: React.FC = () => {
           </Box>
         ) : (
           <Box>
-            <Button color="inherit" onClick={() => navigate('/login')}>
+            <Button color='inherit' onClick={() => navigate('/login')}>
               Iniciar Sesión
             </Button>
-            <Button color="inherit" onClick={() => navigate('/register')}>
+            <Button color='inherit' onClick={() => navigate('/register')}>
               Registrarse
             </Button>
           </Box>
@@ -174,7 +178,7 @@ const Header: React.FC = () => {
       </Toolbar>
 
       <Drawer
-        anchor="left"
+        anchor='left'
         open={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
       >

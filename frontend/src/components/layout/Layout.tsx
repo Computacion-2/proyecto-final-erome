@@ -15,15 +15,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     >
       <Header />
       <Box
-        component="main"
+        component='main'
         sx={{
           flexGrow: 1,
           py: 3,
         }}
       >
-        <Container maxWidth="lg">
-          {children}
-        </Container>
+        <Container maxWidth='lg'>{children}</Container>
       </Box>
       <Footer />
     </Box>
