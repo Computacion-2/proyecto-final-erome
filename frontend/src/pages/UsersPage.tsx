@@ -17,22 +17,15 @@ import {
   Switch,
   FormControlLabel,
   Alert,
-  IconButton,
 } from '@mui/material';
-import {
-  Add,
-  Edit,
-  Delete,
-  Person,
-} from '@mui/icons-material';
+import { Add, Edit, Delete, Person } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
-import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
 import Loading from '../components/common/Loading';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 import { User, Role, UserFormData } from '../types';
 
 const UsersPage: React.FC = () => {
-  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,6 +41,17 @@ const UsersPage: React.FC = () => {
   });
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     fetchUsers();
@@ -101,15 +105,21 @@ const UsersPage: React.FC = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDeleteUser = async (userId: number) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar este usuario?')) {
-      try {
-        await apiService.deleteUser(userId);
-        setUsers(users.filter(user => user.id !== userId));
-      } catch (error) {
-        console.error('Error deleting user:', error);
-      }
-    }
+  const handleDeleteUser = (userId: number) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Eliminar Usuario',
+      message: '¿Estás seguro de que quieres eliminar este usuario?',
+      onConfirm: async () => {
+        try {
+          await apiService.deleteUser(userId);
+          setUsers(users.filter(user => user.id !== userId));
+          setConfirmDialog(prev => ({ ...prev, open: false }));
+        } catch (error) {
+          console.error('Error deleting user:', error);
+        }
+      },
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -120,11 +130,7 @@ const UsersPage: React.FC = () => {
     try {
       if (editingUser) {
         await apiService.updateUser(editingUser.id, formData);
-        setUsers(users.map(user => 
-          user.id === editingUser.id 
-            ? { ...user, ...formData }
-            : user
-        ));
+        fetchUsers(); // Refresh the list to get updated data
       } else {
         await apiService.createUser(formData);
         fetchUsers(); // Refresh the list
@@ -162,7 +168,7 @@ const UsersPage: React.FC = () => {
       field: 'name',
       headerName: 'Nombre',
       width: 200,
-      renderCell: (params) => (
+      renderCell: params => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Person />
           {params.value}
@@ -178,20 +184,20 @@ const UsersPage: React.FC = () => {
       field: 'group',
       headerName: 'Grupo',
       width: 150,
-      renderCell: (params) => params.value || 'No asignado',
+      renderCell: params => params.value || 'No asignado',
     },
     {
       field: 'roles',
       headerName: 'Roles',
       width: 200,
-      renderCell: (params) => (
+      renderCell: params => (
         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
           {params.value.map((role: Role) => (
             <Chip
               key={role.id}
               label={role.name}
-              size="small"
-              color="primary"
+              size='small'
+              color='primary'
             />
           ))}
         </Box>
@@ -201,11 +207,11 @@ const UsersPage: React.FC = () => {
       field: 'isActive',
       headerName: 'Activo',
       width: 100,
-      renderCell: (params) => (
+      renderCell: params => (
         <Chip
           label={params.value ? 'Activo' : 'Inactivo'}
           color={params.value ? 'success' : 'default'}
-          size="small"
+          size='small'
         />
       ),
     },
@@ -214,15 +220,17 @@ const UsersPage: React.FC = () => {
       type: 'actions',
       headerName: 'Acciones',
       width: 120,
-      getActions: (params) => [
+      getActions: params => [
         <GridActionsCellItem
+          key='edit'
           icon={<Edit />}
-          label="Editar"
+          label='Editar'
           onClick={() => handleEditUser(params.row)}
         />,
         <GridActionsCellItem
+          key='delete'
           icon={<Delete />}
-          label="Eliminar"
+          label='Eliminar'
           onClick={() => handleDeleteUser(params.row.id)}
         />,
       ],
@@ -230,20 +238,21 @@ const UsersPage: React.FC = () => {
   ];
 
   if (isLoading) {
-    return <Loading message="Cargando usuarios..." />;
+    return <Loading message='Cargando usuarios...' />;
   }
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">
-          Gestión de Usuarios
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={handleAddUser}
-        >
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 3,
+        }}
+      >
+        <Typography variant='h4'>Gestión de Usuarios</Typography>
+        <Button variant='contained' startIcon={<Add />} onClick={handleAddUser}>
           Agregar Usuario
         </Button>
       </Box>
@@ -262,82 +271,87 @@ const UsersPage: React.FC = () => {
         />
       </Paper>
 
-      <Dialog open={isDialogOpen} onClose={() => setIsDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog
+        open={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        maxWidth='md'
+        fullWidth
+      >
         <DialogTitle>
           {editingUser ? 'Editar Usuario' : 'Agregar Usuario'}
         </DialogTitle>
         <form onSubmit={handleSubmit}>
           <DialogContent>
             {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
+              <Alert severity='error' sx={{ mb: 2 }}>
                 {error}
               </Alert>
             )}
 
             <TextField
               fullWidth
-              label="Nombre"
-              name="name"
+              label='Nombre'
+              name='name'
               value={formData.name}
               onChange={handleChange}
               required
-              margin="normal"
+              margin='normal'
             />
 
             <TextField
               fullWidth
-              label="Email"
-              name="email"
-              type="email"
+              label='Email'
+              name='email'
+              type='email'
               value={formData.email}
               onChange={handleChange}
               required
-              margin="normal"
+              margin='normal'
             />
 
             <TextField
               fullWidth
-              label="Contraseña"
-              name="password"
-              type="password"
+              label='Contraseña'
+              name='password'
+              type='password'
               value={formData.password}
               onChange={handleChange}
               required={!editingUser}
-              margin="normal"
-              helperText={editingUser ? 'Dejar vacío para mantener la contraseña actual' : ''}
+              margin='normal'
+              helperText={
+                editingUser
+                  ? 'Dejar vacío para mantener la contraseña actual'
+                  : ''
+              }
             />
 
             <TextField
               fullWidth
-              label="Grupo"
-              name="group"
+              label='Grupo'
+              name='group'
               value={formData.group}
               onChange={handleChange}
-              margin="normal"
+              margin='normal'
             />
 
-            <FormControl fullWidth margin="normal">
+            <FormControl fullWidth margin='normal'>
               <InputLabel>Roles</InputLabel>
               <Select
                 multiple
                 value={formData.roles}
-                onChange={(e) => handleRoleChange(e.target.value as number[])}
-                renderValue={(selected) => (
+                onChange={e => handleRoleChange(e.target.value as number[])}
+                renderValue={selected => (
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((roleId) => {
+                    {selected.map(roleId => {
                       const role = roles.find(r => r.id === roleId);
                       return (
-                        <Chip
-                          key={roleId}
-                          label={role?.name}
-                          size="small"
-                        />
+                        <Chip key={roleId} label={role?.name} size='small' />
                       );
                     })}
                   </Box>
                 )}
               >
-                {roles.map((role) => (
+                {roles.map(role => (
                   <MenuItem key={role.id} value={role.id}>
                     {role.name}
                   </MenuItem>
@@ -349,25 +363,33 @@ const UsersPage: React.FC = () => {
               control={
                 <Switch
                   checked={formData.isActive}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    isActive: e.target.checked,
-                  }))}
+                  onChange={e =>
+                    setFormData(prev => ({
+                      ...prev,
+                      isActive: e.target.checked,
+                    }))
+                  }
                 />
               }
-              label="Usuario Activo"
+              label='Usuario Activo'
             />
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setIsDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" variant="contained" disabled={isSubmitting}>
+            <Button onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+            <Button type='submit' variant='contained' disabled={isSubmitting}>
               {editingUser ? 'Actualizar' : 'Crear'}
             </Button>
           </DialogActions>
         </form>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+      />
     </Box>
   );
 };
