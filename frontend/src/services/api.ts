@@ -1,16 +1,16 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { 
-  LoginRequest, 
-  LoginResponse, 
-  RegisterRequest, 
-  User, 
-  Student, 
-  Role, 
-  Permission, 
+import {
+  LoginRequest,
+  LoginResponse,
+  RegisterRequest,
+  User,
+  Student,
+  Role,
+  Permission,
   Semester,
   UserFormData,
   StudentFormData,
-  RoleFormData
+  RoleFormData,
 } from '../types';
 
 class ApiService {
@@ -18,7 +18,9 @@ class ApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8080/pensamientoComputacional-0.0.1-SNAPSHOT/api',
+      baseURL:
+        process.env.REACT_APP_API_URL ||
+        'http://localhost:8080/pensamientoComputacional-0.0.1-SNAPSHOT/api',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -26,52 +28,54 @@ class ApiService {
 
     // Request interceptor to add auth token
     this.api.interceptors.request.use(
-      (config) => {
+      config => {
         const token = localStorage.getItem('accessToken');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
       },
-      (error) => {
+      error => {
         return Promise.reject(error);
       }
     );
 
     // Response interceptor to handle token refresh
     this.api.interceptors.response.use(
-      (response) => response,
-      async (error) => {
+      response => response,
+      async error => {
         const originalRequest = error.config;
-        
+
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
-          
+
           try {
             const refreshToken = localStorage.getItem('refreshToken');
             if (refreshToken) {
               const response = await this.refreshToken(refreshToken);
               const { accessToken } = response.data;
               localStorage.setItem('accessToken', accessToken);
-              
+
               originalRequest.headers.Authorization = `Bearer ${accessToken}`;
               return this.api(originalRequest);
             }
-          } catch (refreshError) {
+          } catch {
             // Refresh failed, redirect to login
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
             window.location.href = '/login';
           }
         }
-        
+
         return Promise.reject(error);
       }
     );
   }
 
   // Authentication endpoints
-  async login(credentials: LoginRequest): Promise<AxiosResponse<LoginResponse>> {
+  async login(
+    credentials: LoginRequest
+  ): Promise<AxiosResponse<LoginResponse>> {
     return this.api.post('/auth/login', credentials);
   }
 
@@ -79,7 +83,9 @@ class ApiService {
     return this.api.post('/auth/register', userData);
   }
 
-  async refreshToken(refreshToken: string): Promise<AxiosResponse<{ accessToken: string }>> {
+  async refreshToken(
+    refreshToken: string
+  ): Promise<AxiosResponse<{ accessToken: string }>> {
     return this.api.post('/auth/refresh', { refreshToken });
   }
 
@@ -104,7 +110,10 @@ class ApiService {
     return this.api.post('/users', userData);
   }
 
-  async updateUser(id: number, userData: UserFormData): Promise<AxiosResponse<User>> {
+  async updateUser(
+    id: number,
+    userData: UserFormData
+  ): Promise<AxiosResponse<User>> {
     return this.api.put(`/users/${id}`, userData);
   }
 
@@ -125,11 +134,16 @@ class ApiService {
     return this.api.get(`/students/${id}`);
   }
 
-  async createStudent(studentData: StudentFormData): Promise<AxiosResponse<Student>> {
+  async createStudent(
+    studentData: StudentFormData
+  ): Promise<AxiosResponse<Student>> {
     return this.api.post('/students', studentData);
   }
 
-  async updateStudent(id: number, studentData: StudentFormData): Promise<AxiosResponse<Student>> {
+  async updateStudent(
+    id: number,
+    studentData: StudentFormData
+  ): Promise<AxiosResponse<Student>> {
     return this.api.put(`/students/${id}`, studentData);
   }
 
@@ -150,7 +164,10 @@ class ApiService {
     return this.api.post('/roles', roleData);
   }
 
-  async updateRole(id: number, roleData: RoleFormData): Promise<AxiosResponse<Role>> {
+  async updateRole(
+    id: number,
+    roleData: RoleFormData
+  ): Promise<AxiosResponse<Role>> {
     return this.api.put(`/roles/${id}`, roleData);
   }
 
