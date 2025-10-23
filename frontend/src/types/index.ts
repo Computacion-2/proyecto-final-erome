@@ -1,3 +1,5 @@
+import { ReactNode } from 'react';
+
 // User related types
 export interface User {
   id: number;
@@ -79,11 +81,11 @@ export interface PaginatedResponse<T> {
 
 // Component props types
 export interface LayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export interface ProtectedRouteProps {
-  children: React.ReactNode;
+  children: ReactNode;
   requiredPermissions?: string[];
   requiredRoles?: string[];
 }

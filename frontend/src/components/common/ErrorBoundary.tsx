@@ -1,11 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  Paper,
-  Container,
-} from '@mui/material';
+import { Box, Typography, Button, Paper, Container } from '@mui/material';
 import { Error as ErrorIcon, Refresh } from '@mui/icons-material';
 
 interface Props {
@@ -42,7 +36,7 @@ class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <Container maxWidth="sm" sx={{ mt: 4 }}>
+        <Container maxWidth='sm' sx={{ mt: 4 }}>
           <Paper
             elevation={3}
             sx={{
@@ -51,11 +45,12 @@ class ErrorBoundary extends Component<Props, State> {
             }}
           >
             <ErrorIcon sx={{ fontSize: 64, color: 'error.main', mb: 2 }} />
-            <Typography variant="h5" gutterBottom>
+            <Typography variant='h5' gutterBottom>
               ¡Oops! Algo salió mal
             </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-              Ha ocurrido un error inesperado. Por favor, intenta recargar la página.
+            <Typography variant='body1' color='text.secondary' sx={{ mb: 3 }}>
+              Ha ocurrido un error inesperado. Por favor, intenta recargar la
+              página.
             </Typography>
             {process.env.NODE_ENV === 'development' && this.state.error && (
               <Box
@@ -67,13 +62,13 @@ class ErrorBoundary extends Component<Props, State> {
                   textAlign: 'left',
                 }}
               >
-                <Typography variant="caption" component="pre">
+                <Typography variant='caption' component='pre'>
                   {this.state.error.toString()}
                 </Typography>
               </Box>
             )}
             <Button
-              variant="contained"
+              variant='contained'
               startIcon={<Refresh />}
               onClick={this.handleRetry}
             >

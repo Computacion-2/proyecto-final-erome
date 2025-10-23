@@ -8,7 +8,6 @@ import {
   Alert,
   Container,
 } from '@mui/material';
-import { LoadingButton } from '@mui/lab';
 import { useAuth } from '../hooks/useAuth';
 import FormWrapper from '../components/forms/FormWrapper';
 import { RegisterRequest } from '../types';
@@ -16,7 +15,7 @@ import { RegisterRequest } from '../types';
 const RegisterPage: React.FC = () => {
   const { register, isLoading } = useAuth();
   const navigate = useNavigate();
-  
+
   const [formData, setFormData] = useState<RegisterRequest>({
     name: '',
     email: '',
@@ -58,95 +57,94 @@ const RegisterPage: React.FC = () => {
       }, 2000);
     } catch (err: any) {
       setError(
-        err.response?.data?.message || 
-        'Error al registrarse. Intenta de nuevo.'
+        err.response?.data?.message || 'Error al registrarse. Intenta de nuevo.'
       );
     }
   };
 
   return (
-    <Container maxWidth="sm">
+    <Container maxWidth='sm'>
       <FormWrapper
-        title="Registrarse"
+        title='Registrarse'
         onSubmit={handleSubmit}
         isLoading={isLoading}
-        submitText="Registrarse"
+        submitText='Registrarse'
       >
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity='error' sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
 
         {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
+          <Alert severity='success' sx={{ mb: 2 }}>
             {success}
           </Alert>
         )}
 
         <TextField
           fullWidth
-          label="Nombre Completo"
-          name="name"
+          label='Nombre Completo'
+          name='name'
           value={formData.name}
           onChange={handleChange}
           required
-          margin="normal"
-          autoComplete="name"
+          margin='normal'
+          autoComplete='name'
           autoFocus
         />
 
         <TextField
           fullWidth
-          label="Correo Electrónico"
-          name="email"
-          type="email"
+          label='Correo Electrónico'
+          name='email'
+          type='email'
           value={formData.email}
           onChange={handleChange}
           required
-          margin="normal"
-          autoComplete="email"
+          margin='normal'
+          autoComplete='email'
         />
 
         <TextField
           fullWidth
-          label="Grupo (Opcional)"
-          name="group"
+          label='Grupo (Opcional)'
+          name='group'
           value={formData.group}
           onChange={handleChange}
-          margin="normal"
-          placeholder="Ej: Grupo A, Sección 1"
+          margin='normal'
+          placeholder='Ej: Grupo A, Sección 1'
         />
 
         <TextField
           fullWidth
-          label="Contraseña"
-          name="password"
-          type="password"
+          label='Contraseña'
+          name='password'
+          type='password'
           value={formData.password}
           onChange={handleChange}
           required
-          margin="normal"
-          autoComplete="new-password"
+          margin='normal'
+          autoComplete='new-password'
         />
 
         <TextField
           fullWidth
-          label="Confirmar Contraseña"
-          type="password"
+          label='Confirmar Contraseña'
+          type='password'
           value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
+          onChange={e => setConfirmPassword(e.target.value)}
           required
-          margin="normal"
-          autoComplete="new-password"
+          margin='normal'
+          autoComplete='new-password'
         />
 
         <Box sx={{ mt: 2, textAlign: 'center' }}>
-          <Typography variant="body2">
+          <Typography variant='body2'>
             ¿Ya tienes una cuenta?{' '}
             <Link
-              component="button"
-              variant="body2"
+              component='button'
+              variant='body2'
               onClick={() => navigate('/login')}
             >
               Inicia sesión aquí

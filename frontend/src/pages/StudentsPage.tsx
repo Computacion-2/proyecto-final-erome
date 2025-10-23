@@ -18,15 +18,11 @@ import {
   FormControlLabel,
   Alert,
 } from '@mui/material';
-import {
-  Add,
-  Edit,
-  Delete,
-  School,
-} from '@mui/icons-material';
+import { Add, Edit, Delete, School } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
 import apiService from '../services/api';
 import Loading from '../components/common/Loading';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 import { Student, Semester, StudentFormData } from '../types';
 
 const StudentsPage: React.FC = () => {
@@ -45,6 +41,17 @@ const StudentsPage: React.FC = () => {
   });
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     fetchStudents();
@@ -98,15 +105,21 @@ const StudentsPage: React.FC = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDeleteStudent = async (studentId: number) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar este estudiante?')) {
-      try {
-        await apiService.deleteStudent(studentId);
-        setStudents(students.filter(student => student.id !== studentId));
-      } catch (error) {
-        console.error('Error deleting student:', error);
-      }
-    }
+  const handleDeleteStudent = (studentId: number) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Eliminar Estudiante',
+      message: '¿Estás seguro de que quieres eliminar este estudiante?',
+      onConfirm: async () => {
+        try {
+          await apiService.deleteStudent(studentId);
+          setStudents(students.filter(student => student.id !== studentId));
+          setConfirmDialog(prev => ({ ...prev, open: false }));
+        } catch (error) {
+          console.error('Error deleting student:', error);
+        }
+      },
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,11 +130,13 @@ const StudentsPage: React.FC = () => {
     try {
       if (editingStudent) {
         await apiService.updateStudent(editingStudent.id, formData);
-        setStudents(students.map(student => 
-          student.id === editingStudent.id 
-            ? { ...student, ...formData }
-            : student
-        ));
+        setStudents(
+          students.map(student =>
+            student.id === editingStudent.id
+              ? { ...student, ...formData }
+              : student
+          )
+        );
       } else {
         await apiService.createStudent(formData);
         fetchStudents(); // Refresh the list
@@ -152,7 +167,7 @@ const StudentsPage: React.FC = () => {
       field: 'name',
       headerName: 'Nombre',
       width: 200,
-      renderCell: (params) => (
+      renderCell: params => (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <School />
           {params.value}
@@ -173,29 +188,25 @@ const StudentsPage: React.FC = () => {
       field: 'semester',
       headerName: 'Semestre',
       width: 150,
-      renderCell: (params) => (
-        <Chip
-          label={params.value.name}
-          color="secondary"
-          size="small"
-        />
+      renderCell: params => (
+        <Chip label={params.value.name} color='secondary' size='small' />
       ),
     },
     {
       field: 'group',
       headerName: 'Grupo',
       width: 150,
-      renderCell: (params) => params.value || 'No asignado',
+      renderCell: params => params.value || 'No asignado',
     },
     {
       field: 'isActive',
       headerName: 'Activo',
       width: 100,
-      renderCell: (params) => (
+      renderCell: params => (
         <Chip
           label={params.value ? 'Activo' : 'Inactivo'}
           color={params.value ? 'success' : 'default'}
-          size="small"
+          size='small'
         />
       ),
     },
@@ -204,15 +215,17 @@ const StudentsPage: React.FC = () => {
       type: 'actions',
       headerName: 'Acciones',
       width: 120,
-      getActions: (params) => [
+      getActions: params => [
         <GridActionsCellItem
+          key='edit'
           icon={<Edit />}
-          label="Editar"
+          label='Editar'
           onClick={() => handleEditStudent(params.row)}
         />,
         <GridActionsCellItem
+          key='delete'
           icon={<Delete />}
-          label="Eliminar"
+          label='Eliminar'
           onClick={() => handleDeleteStudent(params.row.id)}
         />,
       ],
@@ -220,17 +233,22 @@ const StudentsPage: React.FC = () => {
   ];
 
   if (isLoading) {
-    return <Loading message="Cargando estudiantes..." />;
+    return <Loading message='Cargando estudiantes...' />;
   }
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">
-          Gestión de Estudiantes
-        </Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 3,
+        }}
+      >
+        <Typography variant='h4'>Gestión de Estudiantes</Typography>
         <Button
-          variant="contained"
+          variant='contained'
           startIcon={<Add />}
           onClick={handleAddStudent}
         >
@@ -252,59 +270,66 @@ const StudentsPage: React.FC = () => {
         />
       </Paper>
 
-      <Dialog open={isDialogOpen} onClose={() => setIsDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog
+        open={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        maxWidth='md'
+        fullWidth
+      >
         <DialogTitle>
           {editingStudent ? 'Editar Estudiante' : 'Agregar Estudiante'}
         </DialogTitle>
         <form onSubmit={handleSubmit}>
           <DialogContent>
             {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
+              <Alert severity='error' sx={{ mb: 2 }}>
                 {error}
               </Alert>
             )}
 
             <TextField
               fullWidth
-              label="Nombre"
-              name="name"
+              label='Nombre'
+              name='name'
               value={formData.name}
               onChange={handleChange}
               required
-              margin="normal"
+              margin='normal'
             />
 
             <TextField
               fullWidth
-              label="Email"
-              name="email"
-              type="email"
+              label='Email'
+              name='email'
+              type='email'
               value={formData.email}
               onChange={handleChange}
               required
-              margin="normal"
+              margin='normal'
             />
 
             <TextField
               fullWidth
-              label="ID Estudiante"
-              name="studentId"
+              label='ID Estudiante'
+              name='studentId'
               value={formData.studentId}
               onChange={handleChange}
               required
-              margin="normal"
+              margin='normal'
             />
 
-            <FormControl fullWidth margin="normal" required>
+            <FormControl fullWidth margin='normal' required>
               <InputLabel>Semestre</InputLabel>
               <Select
                 value={formData.semesterId}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  semesterId: e.target.value as number,
-                }))}
+                onChange={e =>
+                  setFormData(prev => ({
+                    ...prev,
+                    semesterId: e.target.value as number,
+                  }))
+                }
               >
-                {semesters.map((semester) => (
+                {semesters.map(semester => (
                   <MenuItem key={semester.id} value={semester.id}>
                     {semester.name}
                   </MenuItem>
@@ -314,36 +339,44 @@ const StudentsPage: React.FC = () => {
 
             <TextField
               fullWidth
-              label="Grupo"
-              name="group"
+              label='Grupo'
+              name='group'
               value={formData.group}
               onChange={handleChange}
-              margin="normal"
+              margin='normal'
             />
 
             <FormControlLabel
               control={
                 <Switch
                   checked={formData.isActive}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    isActive: e.target.checked,
-                  }))}
+                  onChange={e =>
+                    setFormData(prev => ({
+                      ...prev,
+                      isActive: e.target.checked,
+                    }))
+                  }
                 />
               }
-              label="Estudiante Activo"
+              label='Estudiante Activo'
             />
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setIsDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" variant="contained" disabled={isSubmitting}>
+            <Button onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+            <Button type='submit' variant='contained' disabled={isSubmitting}>
               {editingStudent ? 'Actualizar' : 'Crear'}
             </Button>
           </DialogActions>
         </form>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(prev => ({ ...prev, open: false }))}
+      />
     </Box>
   );
 };

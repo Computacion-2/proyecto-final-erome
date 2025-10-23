@@ -1,12 +1,16 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
-import { CssBaseline, Box } from '@mui/material';
+import { CssBaseline, Box, Typography } from '@mui/material';
 import { AuthProvider } from './hooks/useAuth';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import ErrorBoundary from './components/common/ErrorBoundary';
-import Loading from './components/common/Loading';
 
 // Pages
 import LoginPage from './pages/LoginPage';
@@ -42,10 +46,10 @@ const UnauthorizedPage = () => (
       textAlign: 'center',
     }}
   >
-    <Typography variant="h4" gutterBottom>
+    <Typography variant='h4' gutterBottom>
       Acceso No Autorizado
     </Typography>
-    <Typography variant="body1" color="text.secondary">
+    <Typography variant='body1' color='text.secondary'>
       No tienes permisos para acceder a esta página.
     </Typography>
   </Box>
@@ -63,15 +67,15 @@ const HomePage = () => (
       textAlign: 'center',
     }}
   >
-    <Typography variant="h3" gutterBottom>
+    <Typography variant='h3' gutterBottom>
       Pensamiento Computacional
     </Typography>
-    <Typography variant="h6" color="text.secondary" sx={{ mb: 4 }}>
+    <Typography variant='h6' color='text.secondary' sx={{ mb: 4 }}>
       Sistema de gestión educativa
     </Typography>
-    <Typography variant="body1" color="text.secondary">
-      Bienvenido al sistema de gestión para el curso de Pensamiento Computacional.
-      Inicia sesión para acceder a todas las funcionalidades.
+    <Typography variant='body1' color='text.secondary'>
+      Bienvenido al sistema de gestión para el curso de Pensamiento
+      Computacional. Inicia sesión para acceder a todas las funcionalidades.
     </Typography>
   </Box>
 );
@@ -85,44 +89,59 @@ const App: React.FC = () => {
           <Router>
             <Routes>
               {/* Public routes */}
-              <Route path="/" element={
-                <Layout>
-                  <HomePage />
-                </Layout>
-              } />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/unauthorized" element={
-                <Layout>
-                  <UnauthorizedPage />
-                </Layout>
-              } />
+              <Route
+                path='/'
+                element={
+                  <Layout>
+                    <HomePage />
+                  </Layout>
+                }
+              />
+              <Route path='/login' element={<LoginPage />} />
+              <Route path='/register' element={<RegisterPage />} />
+              <Route
+                path='/unauthorized'
+                element={
+                  <Layout>
+                    <UnauthorizedPage />
+                  </Layout>
+                }
+              />
 
               {/* Protected routes */}
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <DashboardPage />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/users" element={
-                <ProtectedRoute requiredPermissions={['READ_USER']}>
-                  <Layout>
-                    <UsersPage />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/students" element={
-                <ProtectedRoute requiredPermissions={['READ_USER']}>
-                  <Layout>
-                    <StudentsPage />
-                  </Layout>
-                </ProtectedRoute>
-              } />
+              <Route
+                path='/dashboard'
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <DashboardPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path='/users'
+                element={
+                  <ProtectedRoute requiredPermissions={['READ_USER']}>
+                    <Layout>
+                      <UsersPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path='/students'
+                element={
+                  <ProtectedRoute requiredPermissions={['READ_USER']}>
+                    <Layout>
+                      <StudentsPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Catch all route */}
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path='*' element={<Navigate to='/' replace />} />
             </Routes>
           </Router>
         </AuthProvider>

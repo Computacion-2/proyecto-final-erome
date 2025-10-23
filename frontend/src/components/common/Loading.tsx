@@ -6,9 +6,9 @@ interface LoadingProps {
   size?: number;
 }
 
-const Loading: React.FC<LoadingProps> = ({ 
-  message = 'Cargando...', 
-  size = 40 
+const Loading: React.FC<LoadingProps> = ({
+  message = 'Cargando...',
+  size = 40,
 }) => {
   return (
     <Box
@@ -22,7 +22,7 @@ const Loading: React.FC<LoadingProps> = ({
       }}
     >
       <CircularProgress size={size} />
-      <Typography variant="body1" color="text.secondary">
+      <Typography variant='body1' color='text.secondary'>
         {message}
       </Typography>
     </Box>

@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  Paper,
-  Box,
-  Typography,
-  Button,
-  Stack,
-} from '@mui/material';
+import { Paper, Box, Typography, Button, Stack } from '@mui/material';
 import { LoadingButton } from '@mui/lab';
 
 interface FormWrapperProps {
@@ -39,36 +33,28 @@ const FormWrapper: React.FC<FormWrapperProps> = ({
         mt: 2,
       }}
     >
-      <Typography variant="h4" component="h1" gutterBottom>
+      <Typography variant='h4' component='h1' gutterBottom>
         {title}
       </Typography>
-      
-      <Box
-        component="form"
-        onSubmit={onSubmit}
-        sx={{ mt: 3 }}
-      >
+
+      <Box component='form' onSubmit={onSubmit} sx={{ mt: 3 }}>
         {children}
-        
+
         <Stack
-          direction="row"
+          direction='row'
           spacing={2}
           sx={{ mt: 4, justifyContent: 'flex-end' }}
         >
           {onCancel && (
-            <Button
-              variant="outlined"
-              onClick={onCancel}
-              disabled={isLoading}
-            >
+            <Button variant='outlined' onClick={onCancel} disabled={isLoading}>
               {cancelText}
             </Button>
           )}
           <LoadingButton
-            type="submit"
-            variant="contained"
+            type='submit'
+            variant='contained'
             loading={isLoading}
-            loadingPosition="start"
+            loadingPosition='start'
           >
             {submitText}
           </LoadingButton>
