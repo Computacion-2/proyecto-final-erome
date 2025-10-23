@@ -1,10 +1,19 @@
+# Spring Boot
 HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-### STS ###
+# Build outputs
+build/
+out/
+*.jar
+*.war
+*.ear
+*.class
+
+# IDE - STS
 .apt_generated
 .classpath
 .factorypath
@@ -13,13 +22,14 @@ target/
 .springBeans
 .sts4-cache
 
-### IntelliJ IDEA ###
-.idea
+# IDE - IntelliJ IDEA
+.idea/
 *.iws
 *.iml
 *.ipr
+out/
 
-### NetBeans ###
+# IDE - NetBeans
 /nbproject/private/
 /nbbuild/
 /dist/
@@ -29,5 +39,853 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-### VS Code ###
+# IDE - VS Code
 .vscode/
+*.code-workspace
+
+# IDE - Eclipse
+.metadata
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.loadpath
+.recommenders
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+log/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+public
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary folders
+tmp/
+temp/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Application specific
+application-local.properties
+application-dev.properties
+application-prod.properties
+
+# Test reports
+test-results/
+test-reports/
+surefire-reports/
+jacoco.exec
+
+# Postman test reports
+postman/report.html
+postman/newman/
+
+# Docker
+.dockerignore
+Dockerfile.local
+
+# Kubernetes
+*.kubeconfig
+
+# Secrets and credentials
+secrets/
+credentials/
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+
+# Backup files
+*.backup
+*.bak
+*.orig
+
+# Archive files
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# Additional Maven/Gradle build files
+.mvn/
+mvnw
+mvnw.cmd
+gradlew
+gradlew.bat
+.gradle/
+gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Additional IDE files
+*.sublime-project
+*.sublime-workspace
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Additional OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Additional Java files
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+
+# Additional Spring Boot files
+application-*.properties
+application-*.yml
+application-*.yaml
+!application.properties
+!application.yml
+!application.yaml
+
+# Additional test files
+test-output/
+test-results/
+surefire-reports/
+failsafe-reports/
+jacoco/
+coverage/
+*.exec
+
+# Additional log files
+*.log
+logs/
+log/
+*.out
+*.err
+
+# Additional database files
+*.db
+*.sqlite
+*.sqlite3
+*.h2.db
+*.mv.db
+*.trace.db
+
+# Additional cache files
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+dist/
+build/
+out/
+
+# Additional dependency files
+node_modules/
+jspm_packages/
+bower_components/
+.pnp
+.pnp.js
+
+# Additional environment files
+.env*
+!.env.example
+!.env.template
+
+# Additional temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Additional backup files
+*.backup
+*.bak
+*.orig
+*.rej
+*.patch
+
+# Additional security files
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+*.keystore
+*.truststore
+secrets/
+credentials/
+config/secrets/
+
+# Additional deployment files
+*.kubeconfig
+kubeconfig
+.dockerignore
+Dockerfile.local
+docker-compose.override.yml
+
+# Additional documentation files
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+
+# Additional media files
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.svg
+*.ico
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.flv
+*.webm
+*.mp3
+*.wav
+*.flac
+*.aac
+*.ogg
+
+# Additional Postman files
+postman/report.html
+postman/newman/
+postman/results/
+postman/collections/
+postman/environments/
+
+# Additional IDE workspace files
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+
+# Additional OS specific files
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Additional development files
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+
+# Additional build tools
+target/
+build/
+out/
+bin/
+obj/
+*.o
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Additional package managers
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.npmrc
+.yarnrc
+
+# Additional cloud files
+.aws/
+.azure/
+.gcp/
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+# Additional monitoring files
+*.pid
+*.seed
+*.pid.lock
+pids/
+logs/
+log/
+
+# Additional database files
+*.sql
+*.dump
+*.backup
+*.sqlite
+*.db
+*.h2.db
+*.mv.db
+*.trace.db
+
+# Additional configuration files
+config/local/
+config/development/
+config/production/
+config/test/
+local.properties
+gradle.properties
+maven.properties
+
+# Additional test files
+test-output/
+test-results/
+surefire-reports/
+failsafe-reports/
+jacoco/
+coverage/
+*.exec
+*.lcov
+.nyc_output
+
+# Additional documentation files
+docs/build/
+docs/_build/
+docs/site/
+site/
+_site/
+.jekyll-cache/
+.jekyll-metadata
+
+# Additional cache files
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+dist/
+build/
+out/
+node_modules/
+.npm/
+.yarn/
+.pnp
+.pnp.js
+
+# Additional temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+*.log
+*.out
+*.err
+
+# Additional backup files
+*.backup
+*.bak
+*.orig
+*.rej
+*.patch
+*.old
+*.new
+
+# Additional security files
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+*.keystore
+*.truststore
+secrets/
+credentials/
+config/secrets/
+.env*
+!.env.example
+!.env.template
+
+# Additional deployment files
+*.kubeconfig
+kubeconfig
+.dockerignore
+Dockerfile.local
+docker-compose.override.yml
+.helm/
+charts/
+*.tgz
+
+# Additional IDE files
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+# Additional OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+.AppleDouble
+.LSOverride
+Icon
+.DocumentRevisions-V100
+.fseventsd
+.TemporaryItems
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Additional media files
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.svg
+*.ico
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.flv
+*.webm
+*.mp3
+*.wav
+*.flac
+*.aac
+*.ogg
+
+# Additional documentation files
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+
+# Additional archive files
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+*.bz2
+*.xz
+*.lz
+*.lzma
+
+# Additional development files
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+# Additional build files
+target/
+build/
+out/
+bin/
+obj/
+*.o
+*.so
+*.dylib
+*.dll
+*.exe
+*.jar
+*.war
+*.ear
+*.nar
+*.class
+
+# Additional package files
+node_modules/
+jspm_packages/
+bower_components/
+.pnp
+.pnp.js
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.npmrc
+.yarnrc
+
+# Additional cloud files
+.aws/
+.azure/
+.gcp/
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+# Additional monitoring files
+*.pid
+*.seed
+*.pid.lock
+pids/
+logs/
+log/
+
+# Additional database files
+*.sql
+*.dump
+*.backup
+*.sqlite
+*.db
+*.h2.db
+*.mv.db
+*.trace.db
+
+# Additional configuration files
+config/local/
+config/development/
+config/production/
+config/test/
+local.properties
+gradle.properties
+maven.properties
+
+# Additional test files
+test-output/
+test-results/
+surefire-reports/
+failsafe-reports/
+jacoco/
+coverage/
+*.exec
+*.lcov
+.nyc_output
+
+# Additional documentation files
+docs/build/
+docs/_build/
+docs/site/
+site/
+_site/
+.jekyll-cache/
+.jekyll-metadata
+
+# Additional cache files
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+dist/
+build/
+out/
+node_modules/
+.npm/
+.yarn/
+.pnp
+.pnp.js
+
+# Additional temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+*.log
+*.out
+*.err
+
+# Additional backup files
+*.backup
+*.bak
+*.orig
+*.rej
+*.patch
+*.old
+*.new
+
+# Additional security files
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+*.keystore
+*.truststore
+secrets/
+credentials/
+config/secrets/
+.env*
+!.env.example
+!.env.template
+
+# Additional deployment files
+*.kubeconfig
+kubeconfig
+.dockerignore
+Dockerfile.local
+docker-compose.override.yml
+.helm/
+charts/
+*.tgz
+
+# Additional IDE files
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+# Additional OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+.AppleDouble
+.LSOverride
+Icon
+.DocumentRevisions-V100
+.fseventsd
+.TemporaryItems
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Additional media files
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.svg
+*.ico
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.flv
+*.webm
+*.mp3
+*.wav
+*.flac
+*.aac
+*.ogg
+
+# Additional documentation files
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+
+# Additional archive files
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+*.bz2
+*.xz
+*.lz
+*.lzma
