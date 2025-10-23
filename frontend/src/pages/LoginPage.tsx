@@ -8,7 +8,6 @@ import {
   Alert,
   Container,
 } from '@mui/material';
-import { LoadingButton } from '@mui/lab';
 import { useAuth } from '../hooks/useAuth';
 import FormWrapper from '../components/forms/FormWrapper';
 import { LoginRequest } from '../types';
@@ -17,7 +16,7 @@ const LoginPage: React.FC = () => {
   const { login, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const [formData, setFormData] = useState<LoginRequest>({
     email: '',
     password: '',
@@ -44,57 +43,57 @@ const LoginPage: React.FC = () => {
       navigate(from, { replace: true });
     } catch (err: any) {
       setError(
-        err.response?.data?.message || 
-        'Error al iniciar sesión. Verifica tus credenciales.'
+        err.response?.data?.message ||
+          'Error al iniciar sesión. Verifica tus credenciales.'
       );
     }
   };
 
   return (
-    <Container maxWidth="sm">
+    <Container maxWidth='sm'>
       <FormWrapper
-        title="Iniciar Sesión"
+        title='Iniciar Sesión'
         onSubmit={handleSubmit}
         isLoading={isLoading}
-        submitText="Iniciar Sesión"
+        submitText='Iniciar Sesión'
       >
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity='error' sx={{ mb: 2 }}>
             {error}
           </Alert>
         )}
 
         <TextField
           fullWidth
-          label="Correo Electrónico"
-          name="email"
-          type="email"
+          label='Correo Electrónico'
+          name='email'
+          type='email'
           value={formData.email}
           onChange={handleChange}
           required
-          margin="normal"
-          autoComplete="email"
+          margin='normal'
+          autoComplete='email'
           autoFocus
         />
 
         <TextField
           fullWidth
-          label="Contraseña"
-          name="password"
-          type="password"
+          label='Contraseña'
+          name='password'
+          type='password'
           value={formData.password}
           onChange={handleChange}
           required
-          margin="normal"
-          autoComplete="current-password"
+          margin='normal'
+          autoComplete='current-password'
         />
 
         <Box sx={{ mt: 2, textAlign: 'center' }}>
-          <Typography variant="body2">
+          <Typography variant='body2'>
             ¿No tienes una cuenta?{' '}
             <Link
-              component="button"
-              variant="body2"
+              component='button'
+              variant='body2'
               onClick={() => navigate('/register')}
             >
               Regístrate aquí
