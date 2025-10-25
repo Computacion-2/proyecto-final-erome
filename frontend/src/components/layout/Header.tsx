@@ -25,6 +25,10 @@ import {
   People,
   School,
   Settings,
+  Assignment,
+  TrendingUp,
+  EmojiEvents,
+  Person,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -59,6 +63,10 @@ const Header: React.FC = () => {
 
   const navigationItems = [
     { label: 'Dashboard', path: '/dashboard', icon: <Dashboard /> },
+    { label: 'Actividades', path: '/activities', icon: <Assignment /> },
+    { label: 'Rendimiento', path: '/performance', icon: <TrendingUp /> },
+    { label: 'Tablero', path: '/scoreboard', icon: <EmojiEvents /> },
+    { label: 'Mi Perfil', path: '/profile', icon: <Person /> },
     { label: 'Usuarios', path: '/users', icon: <People /> },
     { label: 'Estudiantes', path: '/students', icon: <School /> },
     { label: 'Configuración', path: '/settings', icon: <Settings /> },
