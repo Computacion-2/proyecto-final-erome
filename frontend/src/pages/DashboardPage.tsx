@@ -19,6 +19,8 @@ import {
   Assignment,
   TrendingUp,
   Person,
+  Assessment,
+  Speed,
 } from '@mui/icons-material';
 import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
@@ -32,6 +34,10 @@ const DashboardPage: React.FC = () => {
     totalStudents: 0,
     totalRoles: 0,
     activeUsers: 0,
+    activeActivities: 0,
+    completedExercises: 0,
+    averageScore: 0,
+    topPerformers: 0,
   });
   const [recentUsers, setRecentUsers] = useState<User[]>([]);
   const [recentStudents, setRecentStudents] = useState<Student[]>([]);
@@ -58,6 +64,10 @@ const DashboardPage: React.FC = () => {
           totalStudents: students.length,
           totalRoles: roles.length,
           activeUsers: users.filter(u => u.isActive).length,
+          activeActivities: 3, // Mock data
+          completedExercises: 45, // Mock data
+          averageScore: 78.5, // Mock data
+          topPerformers: 5, // Mock data
         });
 
         // Get recent users (last 5)
@@ -84,7 +94,7 @@ const DashboardPage: React.FC = () => {
     color = 'primary',
   }: {
     title: string;
-    value: number;
+    value: number | string;
     icon: React.ReactNode;
     color?: string;
   }) => (
@@ -144,6 +154,30 @@ const DashboardPage: React.FC = () => {
             value={stats.activeUsers}
             icon={<TrendingUp />}
             color='warning'
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard
+            title='Actividades Activas'
+            value={stats.activeActivities}
+            icon={<Assignment />}
+            color='info'
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard
+            title='Ejercicios Completados'
+            value={stats.completedExercises}
+            icon={<Speed />}
+            color='success'
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard
+            title='Promedio General'
+            value={stats.averageScore}
+            icon={<Assessment />}
+            color='primary'
           />
         </Grid>
 
