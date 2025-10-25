@@ -1,8 +1,7 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { ProtectedRouteProps } from '../../types';
-import Loading from './Loading';
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
@@ -10,41 +9,51 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredRoles = [],
 }) => {
   const { user, isAuthenticated, isLoading } = useAuth();
-  const location = useLocation();
 
+  // Show loading while checking authentication
   if (isLoading) {
-    return <Loading message='Verificando autenticación...' />;
+    return (
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+        }}
+      >
+        <div>Loading...</div>
+      </div>
+    );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to='/login' state={{ from: location }} replace />;
+  // Redirect to login if not authenticated
+  if (!isAuthenticated || !user) {
+    return <Navigate to='/login' replace />;
   }
 
-  if (user) {
-    // Check role requirements
-    if (requiredRoles.length > 0) {
-      const userRoles = user.roles.map(role => role.name);
-      const hasRequiredRole = requiredRoles.some(role =>
-        userRoles.includes(role)
-      );
+  // Check role-based access
+  if (requiredRoles.length > 0) {
+    const userRoles = user.roles.map(role => role.name);
+    const hasRequiredRole = requiredRoles.some(role =>
+      userRoles.includes(role)
+    );
 
-      if (!hasRequiredRole) {
-        return <Navigate to='/unauthorized' replace />;
-      }
+    if (!hasRequiredRole) {
+      return <Navigate to='/unauthorized' replace />;
     }
+  }
 
-    // Check permission requirements
-    if (requiredPermissions.length > 0) {
-      const userPermissions = user.roles.flatMap(role =>
-        role.permissions.map(permission => permission.name)
-      );
-      const hasRequiredPermission = requiredPermissions.some(permission =>
-        userPermissions.includes(permission)
-      );
+  // Check permission-based access
+  if (requiredPermissions.length > 0) {
+    const userPermissions = user.roles.flatMap(role =>
+      role.permissions.map(permission => permission.name)
+    );
+    const hasRequiredPermission = requiredPermissions.some(permission =>
+      userPermissions.includes(permission)
+    );
 
-      if (!hasRequiredPermission) {
-        return <Navigate to='/unauthorized' replace />;
-      }
+    if (!hasRequiredPermission) {
+      return <Navigate to='/unauthorized' replace />;
     }
   }
 
