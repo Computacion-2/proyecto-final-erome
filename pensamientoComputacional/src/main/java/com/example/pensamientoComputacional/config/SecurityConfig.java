@@ -20,6 +20,11 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -27,10 +32,10 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
-    
+
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
-    
+
     @Autowired
     private SecurityFilter securityFilter;
 
@@ -60,17 +65,14 @@ public class SecurityConfig {
     @Order(1)
     public SecurityFilterChain restApiSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-            .securityMatcher("/api/**")
-            .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(auth -> auth
-                // REST API authentication endpoints are public
-                .requestMatchers("/api/auth/**").permitAll()
-                // All other REST API endpoints require authentication
-                .requestMatchers("/api/**").authenticated()
-            )
-            .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
-            .authenticationProvider(authenticationProvider());
-        
+                .securityMatcher("/api/**")
+                .cors(Customizer.withDefaults())
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/**").authenticated())
+                .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
+                .authenticationProvider(authenticationProvider());
         return http.build();
     }
 
@@ -78,34 +80,32 @@ public class SecurityConfig {
     @Order(2)
     public SecurityFilterChain mvcSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-            .securityMatcher(request -> !request.getRequestURI().startsWith("/api/"))
-            .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(auth -> auth
-                // Public endpoints
-                .requestMatchers("/", "/health", "/h2-console/**", "/css/**", "/js/**", "/images/**", "/auth/login", "/auth/register").permitAll()
-                // Admin endpoints
-                .requestMatchers("/admin/**").hasRole("ADMIN")
-                .anyRequest().authenticated()
-            )
-            .headers(headers -> headers.frameOptions(frame -> frame.disable()))
-            .formLogin(form -> form
-                .loginPage("/auth/login")
-                .loginProcessingUrl("/auth/login")
-                .usernameParameter("email")
-                .passwordParameter("password")
-                .successHandler(authenticationSuccessHandler())
-                .failureUrl("/auth/login?error=true")
-                .permitAll()
-            )
-            .logout(logout -> logout
-                .logoutRequestMatcher(new AntPathRequestMatcher("/auth/logout", "GET"))
-                .logoutSuccessUrl("/auth/login?logout=true")
-                .invalidateHttpSession(true)
-                .deleteCookies("JSESSIONID")
-                .permitAll()
-            )
-            .httpBasic(Customizer.withDefaults())
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .securityMatcher(request -> !request.getRequestURI().startsWith("/api/"))
+                .cors(Customizer.withDefaults())
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/", "/health", "/h2-console/**", "/css/**", "/js/**", "/images/**",
+                                "/auth/login", "/auth/register")
+                        .permitAll()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .anyRequest().authenticated())
+                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
+                .formLogin(form -> form
+                        .loginPage("/auth/login")
+                        .loginProcessingUrl("/auth/login")
+                        .usernameParameter("email")
+                        .passwordParameter("password")
+                        .successHandler(authenticationSuccessHandler())
+                        .failureUrl("/auth/login?error=true")
+                        .permitAll())
+                .logout(logout -> logout
+                        .logoutRequestMatcher(new AntPathRequestMatcher("/auth/logout", "GET"))
+                        .logoutSuccessUrl("/auth/login?logout=true")
+                        .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID")
+                        .permitAll())
+                .httpBasic(Customizer.withDefaults())
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         http.authenticationProvider(authenticationProvider());
         return http.build();
     }
@@ -114,7 +114,7 @@ public class SecurityConfig {
     public AuthenticationSuccessHandler authenticationSuccessHandler() {
         return (request, response, authentication) -> {
             boolean isAdmin = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
             if (isAdmin) {
                 response.sendRedirect("/admin/users");
             } else {
@@ -122,6 +122,17 @@ public class SecurityConfig {
             }
         };
     }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
 }
-
-

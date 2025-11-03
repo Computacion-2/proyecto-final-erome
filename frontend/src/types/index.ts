@@ -1,116 +1,130 @@
-import { ReactNode } from 'react';
-
-// User related types
 export interface User {
   id: number;
   name: string;
   email: string;
   photoUrl?: string;
-  group?: string;
+  groupName?: string;
   isActive: boolean;
-  createdAt: string;
   roles: Role[];
+  createdAt: string;
 }
 
 export interface Role {
   id: number;
   name: string;
   description?: string;
-  permissions: Permission[];
-}
-
-export interface Permission {
-  id: number;
-  name: string;
-  description?: string;
 }
 
 export interface Student {
-  id: number;
-  name: string;
-  email: string;
-  studentId: string;
-  semester: Semester;
-  group?: string;
-  isActive: boolean;
-  createdAt: string;
+  userId: number;
+  initialProfile?: string;
+  user?: User;
+}
+
+export interface Professor {
+  userId: number;
+  user?: User;
 }
 
 export interface Semester {
   id: number;
-  name: string;
-  description?: string;
+  code: string;
   startDate: string;
   endDate: string;
   isActive: boolean;
 }
 
-// Authentication types
+export interface Group {
+  id: number;
+  name: string;
+  courseId?: number;
+  semesterId: number;
+  semester?: Semester;
+}
+
+export interface Activity {
+  id: number;
+  groupId: number;
+  professorId: number;
+  title: string;
+  startTime: string;
+  endTime: string;
+  status: 'SCHEDULED' | 'ACTIVE' | 'COMPLETED';
+  group?: Group;
+}
+
+export interface Exercise {
+  id: number;
+  activityId: number;
+  title: string;
+  statement: string;
+  difficulty: number; // 0-10
+  maxPoints: number;
+  profiles?: ProfileType[];
+}
+
+export interface ProfileType {
+  profileCode: string;
+  description: string;
+}
+
+export interface Resolution {
+  id: number;
+  studentId: number;
+  exerciseId: number;
+  pointsAwarded?: number;
+  awardedBy?: number;
+  status: 'PENDING' | 'SUBMITTED' | 'GRADED';
+  attemptNo: number;
+  submittedAt: string;
+}
+
+export interface StudentPerformance {
+  id: number;
+  studentId: number;
+  totalPoints: number;
+  category: string;
+  updatedAt: string;
+}
+
+export interface StudentEnrollment {
+  id: number;
+  studentId: number;
+  groupId: number;
+  semesterId: number;
+  enrolledAt: string;
+  isActive: boolean;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;
 }
 
 export interface LoginResponse {
-  accessToken: string;
+  token: string;
   refreshToken: string;
   user: User;
+  expiresIn: number;
 }
 
 export interface RegisterRequest {
   name: string;
   email: string;
   password: string;
-  group?: string;
+  role: number; // Role ID
+  groupId?: number;
+  groupName?: string;
+  photoUrl?: string;
 }
 
-// API Response types
-export interface ApiResponse<T> {
-  data: T;
-  message?: string;
-  success: boolean;
+export interface ScoreboardEvent {
+  id: number;
+  activityId: number;
+  studentId: number;
+  exerciseId: number;
+  message: string;
+  createdAt: string;
+  userId: number;
 }
 
-export interface PaginatedResponse<T> {
-  content: T[];
-  totalElements: number;
-  totalPages: number;
-  size: number;
-  number: number;
-}
-
-// Component props types
-export interface LayoutProps {
-  children: ReactNode;
-}
-
-export interface ProtectedRouteProps {
-  children: ReactNode;
-  requiredPermissions?: string[];
-  requiredRoles?: string[];
-}
-
-// Form types
-export interface UserFormData {
-  name: string;
-  email: string;
-  password?: string;
-  group?: string;
-  roles: number[];
-  isActive: boolean;
-}
-
-export interface StudentFormData {
-  name: string;
-  email: string;
-  studentId: string;
-  semesterId: number;
-  group?: string;
-  isActive: boolean;
-}
-
-export interface RoleFormData {
-  name: string;
-  description?: string;
-  permissions: number[];
-}
