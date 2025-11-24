@@ -54,6 +54,55 @@ public class ResolutionRestController {
     @Autowired
     private IUserService userService;
 
+    @GetMapping
+    @Operation(summary = "Obtener todas las resoluciones", description = "Retorna todas las resoluciones del sistema")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista de resoluciones obtenida exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autorizado")
+    })
+    public ResponseEntity<List<ResolutionDto>> getAllResolutions() {
+        List<Resolution> resolutions = resolutionRepository.findAll();
+        List<ResolutionDto> resolutionDtos = resolutions.stream()
+                .map(resolutionMapper::entityToDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(resolutionDtos);
+    }
+
+    @GetMapping("/me")
+    @Operation(summary = "Obtener mis resoluciones", description = "Retorna todas las resoluciones del estudiante autenticado")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista de resoluciones obtenida exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autorizado")
+    })
+    public ResponseEntity<List<ResolutionDto>> getMyResolutions() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String email = authentication.getName();
+        User user = userService.findByEmail(email);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        Student student = studentRepository.findById(user.getId())
+                .orElse(null);
+        
+        if (student == null) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        List<Resolution> resolutions = resolutionRepository.findAll().stream()
+                .filter(r -> r.getStudent().getId().equals(student.getId()))
+                .collect(Collectors.toList());
+        
+        List<ResolutionDto> resolutionDtos = resolutions.stream()
+                .map(resolutionMapper::entityToDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(resolutionDtos);
+    }
+
     @PostMapping
     @PreAuthorize("hasRole('STUDENT') or hasRole('ADMIN')")
     @Operation(summary = "Enviar resolución", description = "Envía una resolución de ejercicio (solo estudiantes)")

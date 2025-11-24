@@ -1,0 +1,37 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - cd front
+        - npm ci
+    build:
+      commands:
+        - npm run build
+    postBuild:
+      commands:
+        - echo "Frontend build completed"
+  artifacts:
+    baseDirectory: front/dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - front/node_modules/**/*
+backend:
+  phases:
+    build:
+      commands:
+        - echo "Building backend..."
+        - cd pensamientoComputacional
+        - chmod +x ./mvnw
+        - ./mvnw clean package -DskipTests
+    post_build:
+      commands:
+        - echo "Backend build completed"
+  artifacts:
+    baseDirectory: pensamientoComputacional/target
+    files:
+      - '*.war'
+      - '*.jar'
+appRoot: .
