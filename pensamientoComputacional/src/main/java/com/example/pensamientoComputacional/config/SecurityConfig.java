@@ -5,7 +5,6 @@ import com.example.pensamientoComputacional.security.SecurityFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
@@ -17,9 +16,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -62,66 +59,27 @@ public class SecurityConfig {
     }
 
     @Bean
-    @Order(1)
-    public SecurityFilterChain restApiSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/api/**")
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
+                        // Permitir acceso público a endpoints de autenticación y test
                         .requestMatchers("/api/auth/**", "/api/test/**").permitAll()
+                        // Permitir acceso a WebSocket
                         .requestMatchers("/ws/**").permitAll()
-                        .requestMatchers("/api/**").authenticated())
+                        // Permitir acceso a Swagger UI y documentación
+                        .requestMatchers("/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll()
+                        // Permitir acceso a H2 console solo en desarrollo (si se usa)
+                        .requestMatchers("/h2-console/**").permitAll()
+                        // Todas las demás rutas de API requieren autenticación
+                        .requestMatchers("/api/**").authenticated()
+                        // Cualquier otra ruta también requiere autenticación
+                        .anyRequest().authenticated())
+                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
                 .authenticationProvider(authenticationProvider());
         return http.build();
-    }
-
-    @Bean
-    @Order(2)
-    public SecurityFilterChain mvcSecurityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .securityMatcher(request -> !request.getRequestURI().startsWith("/api/"))
-                .cors(Customizer.withDefaults())
-                .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/health", "/h2-console/**", "/css/**", "/js/**", "/images/**",
-                                "/auth/login", "/auth/register", "/ws/**")
-                        .permitAll()
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .anyRequest().authenticated())
-                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
-                .formLogin(form -> form
-                        .loginPage("/auth/login")
-                        .loginProcessingUrl("/auth/login")
-                        .usernameParameter("email")
-                        .passwordParameter("password")
-                        .successHandler(authenticationSuccessHandler())
-                        .failureUrl("/auth/login?error=true")
-                        .permitAll())
-                .logout(logout -> logout
-                        .logoutRequestMatcher(new AntPathRequestMatcher("/auth/logout", "GET"))
-                        .logoutSuccessUrl("/auth/login?logout=true")
-                        .invalidateHttpSession(true)
-                        .deleteCookies("JSESSIONID")
-                        .permitAll())
-                .httpBasic(Customizer.withDefaults())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-        http.authenticationProvider(authenticationProvider());
-        return http.build();
-    }
-
-    @Bean
-    public AuthenticationSuccessHandler authenticationSuccessHandler() {
-        return (request, response, authentication) -> {
-            boolean isAdmin = authentication.getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-            if (isAdmin) {
-                response.sendRedirect("/admin/users");
-            } else {
-                response.sendRedirect("/");
-            }
-        };
     }
 
     @Bean
