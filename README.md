@@ -1,101 +1,274 @@
-### deployed in
+# Pensamiento Computacional - Plataforma Web
 
-http://x104m10:8080/pensamientoComputacional-0.0.1-SNAPSHOT/
+Plataforma web para gestión de ejercicios de programación con gamificación, desarrollada con Spring Boot (Backend) y React (Frontend), utilizando AWS RDS (PostgreSQL) y AWS S3 para almacenamiento.
 
 ### Video link
 https://youtu.be/bQTgy6Sn2Uo
-
-# Spring Boot JPA - Pensamiento Computacional
-
 
 ## Quick Start
 
 ### Prerequisites
 - Java 21 (OpenJDK 21)
 - Maven (included with Maven Wrapper)
+- Node.js 18+ y pnpm
+- AWS CLI configurado (para recursos AWS)
+- PostgreSQL (o AWS RDS)
 
-### 1. Navigate to the project directory
+### Configuración Inicial
+
+#### 1. Configurar Variables de Entorno
+
+Crea un archivo `.env` en la raíz del proyecto con las siguientes variables:
+
+```bash
+# AWS Configuration
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=tu_access_key
+AWS_SECRET_ACCESS_KEY=tu_secret_key
+
+# S3 Bucket Name
+S3_BUCKET_NAME=pensamiento-computacional-images-xxxxx
+
+# PostgreSQL (RDS) Configuration
+DB_HOST=tu-rds-endpoint.rds.amazonaws.com
+DB_PORT=5432
+DB_NAME=pensamiento_computacional
+DB_USER=postgres
+DB_PASSWORD=tu_password
+
+# JWT Configuration (opcional, tiene valores por defecto)
+JWT_SECRET=mySecretKey123456789012345678901234567890
+```
+
+#### 2. Crear Recursos AWS (Opcional)
+
+Si aún no tienes los recursos AWS creados, puedes usar los scripts automatizados:
+
+```bash
+# Crear bucket S3 y instancia RDS
+cd scripts
+./setup-aws-infrastructure.sh
+# Selecciona la opción 3 para crear ambos recursos
+
+# Actualizar .env con los valores de los recursos creados
+echo "4" | ./setup-aws-infrastructure.sh
+```
+
+#### 3. Validar Configuración
+
+```bash
+# Validar que todas las variables estén configuradas
+./validate-config.sh
+```
+
+### Ejecutar la Aplicación
+
+#### Opción 1: Usando Scripts (Recomendado)
+
+**Backend:**
+```bash
+# Desde la raíz del proyecto
+./start-backend.sh
+```
+
+**Frontend:**
+```bash
+# En otra terminal, desde la raíz del proyecto
+cd front
+pnpm install
+pnpm run dev
+```
+
+#### Opción 2: Manual
+
+**Backend:**
+```bash
+# 1. Activar perfiles de Spring Boot
+export SPRING_PROFILES_ACTIVE=prod,aws
+
+# 2. Cargar variables de entorno
+source load-env.sh
+
+# 3. Configurar JAVA_HOME
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+
+# 4. Iniciar backend
+cd pensamientoComputacional
+./mvnw spring-boot:run -DskipTests
+```
+
+**Frontend:**
+```bash
+# En otra terminal
+cd front
+pnpm install
+pnpm run dev
+```
+
+### Acceso a la Aplicación
+
+Una vez iniciada, la aplicación estará disponible en:
+
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8080/api
+- **Swagger UI**: http://localhost:8080/swagger-ui
+- **API Docs**: http://localhost:8080/api-docs
+
+### Estructura del Proyecto
+
+```
+proyecto-final-erome/
+├── pensamientoComputacional/    # Backend (Spring Boot)
+│   ├── src/
+│   └── pom.xml
+├── front/                        # Frontend (React + Vite)
+│   ├── src/
+│   └── package.json
+├── scripts/                      # Scripts de automatización
+│   ├── setup-aws-infrastructure.sh
+│   ├── create-s3-bucket.sh
+│   ├── create-rds-instance.sh
+│   └── update-env-from-aws.sh
+├── .env                          # Variables de entorno (no commitear)
+├── load-env.sh                   # Script para cargar variables
+├── start-backend.sh              # Script para iniciar backend
+└── validate-config.sh            # Script de validación
+```
+
+## Comandos Adicionales
+
+### Compilar el Proyecto
+
+**Backend:**
 ```bash
 cd pensamientoComputacional
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+./mvnw clean compile
 ```
 
-### 2. Compile the project
+**Frontend:**
 ```bash
-export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw clean compile
+cd front
+pnpm install
+pnpm run build
 ```
 
-### 3. Run tests
+### Ejecutar Tests
+
+**Backend:**
 ```bash
-export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw test
+cd pensamientoComputacional
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+./mvnw test
 ```
 
-### 4. Run the application
+**Backend con coverage:**
 ```bash
-export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw spring-boot:run
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+./mvnw clean test jacoco:report
 ```
 
-The application will start on `http://localhost:8080`
+### Empaquetar la Aplicación
 
-## Alternative Commands
-
-### Build the project (with tests)
+**Backend:**
 ```bash
-export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw clean install
+cd pensamientoComputacional
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+./mvnw clean package -DskipTests
 ```
 
-### Run tests with coverage report
+**Frontend:**
 ```bash
-export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw clean test jacoco:report
-```
-
-### Package the application
-```bash
-export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw clean package
+cd front
+pnpm run build
+# Los archivos se generan en front/build/
 ```
 
 ## Troubleshooting
 
-### Common Issues
+### Problemas Comunes
 
-#### Java Version Issues
-If you get "release version 21 not supported" error:
+#### Error de Versión de Java
+Si obtienes el error "release version 21 not supported":
 ```bash
-# Check Java version
+# Verificar versión de Java
 java -version
 
-# Set JAVA_HOME explicitly
+# Configurar JAVA_HOME explícitamente
 export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
 
-# Verify Maven uses correct Java version
+# Verificar que Maven usa la versión correcta
+cd pensamientoComputacional
 ./mvnw -version
 ```
 
-#### Compilation Issues
-If compilation fails:
+#### Error de Compilación
+Si la compilación falla:
 ```bash
-# Clean and recompile
-export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw clean compile
+# Limpiar y recompilar
+cd pensamientoComputacional
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+./mvnw clean compile
 
-# Check for syntax errors
+# Ver errores detallados
 ./mvnw compile -X
 ```
 
-#### Test Failures
-If tests fail:
+#### Error de Conexión a Base de Datos
+Si hay problemas conectando a RDS:
 ```bash
-# Run tests with verbose output
-export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw test -X
+# Verificar variables de entorno
+source load-env.sh
+echo $DB_HOST
+echo $DB_PASSWORD
 
-# Run specific test class
-export JAVA_HOME=/usr/lib/jvm/java-21-openjdk && ./mvnw test -Dtest=UserServiceTest
+# Validar configuración
+./validate-config.sh
+
+# Verificar conectividad a RDS
+psql -h $DB_HOST -U $DB_USER -d $DB_NAME
 ```
 
-### Database Access
+#### Error de CORS
+Si hay errores de CORS en el frontend:
+- Verificar que el backend esté corriendo en `http://localhost:8080`
+- Verificar que el frontend esté en `http://localhost:3000`
+- Revisar la configuración de CORS en `SecurityConfig.java`
 
-- **H2 Console**: `http://localhost:8080/h2-console`
-- **JDBC URL**: `jdbc:h2:mem:testdb`
-- **Username**: `sa`
-- **Password**: `password`
+#### Puerto en Uso
+Si el puerto 8080 o 3000 está en uso:
+```bash
+# Verificar procesos en puerto 8080
+lsof -i :8080
+
+# Verificar procesos en puerto 3000
+lsof -i :3000
+
+# Matar proceso si es necesario
+kill -9 <PID>
+```
+
+#### Variables de Entorno No Cargadas
+```bash
+# Asegurarse de cargar variables antes de iniciar
+source load-env.sh
+
+# Verificar que estén cargadas
+env | grep DB_
+env | grep AWS_
+```
+
+### Acceso a Base de Datos
+
+**PostgreSQL (RDS):**
+```bash
+# Conectar usando psql
+psql -h $DB_HOST -U $DB_USER -d $DB_NAME
+
+# O usando variables de entorno cargadas
+source load-env.sh
+psql -h $DB_HOST -U $DB_USER -d $DB_NAME
+```
 
 
 ## Testing
