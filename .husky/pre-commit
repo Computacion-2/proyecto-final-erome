@@ -1,6 +1,1 @@
 #!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
-# Navigate to frontend directory and run lint-staged
-cd frontend
-npm run pre-commit

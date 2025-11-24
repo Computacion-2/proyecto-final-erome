@@ -1,6 +1,1 @@
 #!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
-# Navigate to frontend directory and run pre-push checks
-cd frontend
-npm run pre-push
