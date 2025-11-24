@@ -7,8 +7,12 @@ import com.example.pensamientoComputacional.model.dto.RegisterRequest;
 import com.example.pensamientoComputacional.model.dto.TokenRefreshRequest;
 import com.example.pensamientoComputacional.model.dto.TokenRefreshResponse;
 import com.example.pensamientoComputacional.model.dto.UserDto;
+import com.example.pensamientoComputacional.model.entities.Student;
 import com.example.pensamientoComputacional.model.entities.User;
+import com.example.pensamientoComputacional.repository.StudentRepository;
+import com.example.pensamientoComputacional.repository.UserRepository;
 import com.example.pensamientoComputacional.security.JwtTokenProvider;
+import jakarta.persistence.EntityManager;
 import com.example.pensamientoComputacional.service.AuthService;
 import com.example.pensamientoComputacional.service.IUserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -48,6 +52,15 @@ public class AuthRestController {
 
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private StudentRepository studentRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @PostMapping("/login")
     @Operation(summary = "Iniciar sesión", description = "Autentica un usuario y retorna tokens JWT")
@@ -100,10 +113,36 @@ public class AuthRestController {
                     registerRequest.getPassword(),
                     registerRequest.getRole());
 
+            // Set group if provided
+            if (registerRequest.getGroup() != null && !registerRequest.getGroup().isEmpty()) {
+                user.setGroup(registerRequest.getGroup());
+            }
+
+            // Save user with group first
+            user = userRepository.save(user);
+
+            // Create Student entity if role is STUDENT (use the saved user directly)
+            if ("STUDENT".equals(registerRequest.getRole())) {
+                // Check if Student already exists
+                if (!studentRepository.existsById(user.getId())) {
+                    Student student = new Student();
+                    // Don't set ID manually - let @MapsId handle it
+                    student.setUser(user);
+                    if (registerRequest.getStudentRole() != null) {
+                        student.setInitialProfile(registerRequest.getStudentRole());
+                    }
+                    // Use persist to ensure it's a new entity
+                    entityManager.persist(student);
+                    entityManager.flush();
+                }
+            }
+
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(userMapper.entityToDto(user));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(null);
         }
     }
 

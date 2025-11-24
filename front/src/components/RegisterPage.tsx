@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { GraduationCap, AlertCircle, Upload } from 'lucide-react';
 import { Alert, AlertDescription } from './ui/alert';
+import { imagesApi } from '../lib/api/images';
+import { toast } from 'sonner@2.0.3';
 
 interface RegisterPageProps {
   onSwitchToLogin: () => void;
@@ -25,14 +27,25 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     // Validations
+    if (!formData.name || formData.name.trim().length < 2) {
+      setError('El nombre debe tener al menos 2 caracteres');
+      return;
+    }
+
     if (!formData.email.endsWith('@u.icesi.edu.co')) {
       setError('Debes usar tu correo institucional (@u.icesi.edu.co)');
+      return;
+    }
+
+    if (!formData.group) {
+      setError('Debes seleccionar un grupo');
       return;
     }
 
@@ -48,33 +61,57 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
 
     setLoading(true);
 
-    const success = await register({
-      name: formData.name,
-      email: formData.email,
-      role: 'student',
-      group: formData.group,
-      studentRole: formData.studentRole,
-      profilePhoto: formData.profilePhoto || undefined,
-    }, formData.password);
+    try {
+      console.log('Registering user:', { 
+        name: formData.name, 
+        email: formData.email, 
+        group: formData.group, 
+        studentRole: formData.studentRole,
+        hasPassword: !!formData.password 
+      });
+      
+      const success = await register({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        role: 'student',
+        group: formData.group,
+        studentRole: formData.studentRole,
+        profilePhoto: formData.profilePhoto || undefined,
+      }, formData.password);
 
-    if (!success) {
-      setError('Este correo ya está registrado');
+      if (!success) {
+        setError('Este correo ya está registrado');
+        setLoading(false);
+        return;
+      }
+
+      // Registration successful, user will be logged in automatically
+      toast.success('¡Registro exitoso! Bienvenido a la plataforma');
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      const errorMessage = error?.message || error?.error || 'Error al registrar. Por favor intenta de nuevo.';
+      setError(errorMessage);
       setLoading(false);
       return;
     }
 
-    // Registration successful, user will be logged in automatically
     setLoading(false);
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, profilePhoto: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+      setUploadingPhoto(true);
+      try {
+        const response = await imagesApi.uploadImage(file);
+        setFormData({ ...formData, profilePhoto: response.url });
+        toast.success('Foto subida exitosamente');
+      } catch (error) {
+        console.error('Failed to upload photo:', error);
+        toast.error('Error al subir la foto. Por favor intenta de nuevo.');
+      } finally {
+        setUploadingPhoto(false);
+      }
     }
   };
 
@@ -211,8 +248,8 @@ export function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
               />
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Registrando...' : 'Crear cuenta'}
+            <Button type="submit" className="w-full" disabled={loading || uploadingPhoto}>
+              {loading ? 'Registrando...' : uploadingPhoto ? 'Subiendo foto...' : 'Crear cuenta'}
             </Button>
 
             <div className="text-center text-sm text-muted-foreground">

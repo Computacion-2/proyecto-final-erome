@@ -25,4 +25,8 @@ public class RegisterRequest {
     private String password;
     
     private String role = "STUDENT"; // Default role
+    
+    private String group; // For students
+    
+    private String studentRole; // For students: pro, killer, principiante
 }

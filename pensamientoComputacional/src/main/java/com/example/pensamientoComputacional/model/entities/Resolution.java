@@ -41,6 +41,9 @@ public class Resolution {
     @Column(name = "submitted_at", nullable = false)
     private LocalDateTime submittedAt;
     
+    @Column(columnDefinition = "TEXT")
+    private String code; // Student's code submission or QR/alphanumeric code
+    
     @PrePersist
     protected void onCreate() {
         submittedAt = LocalDateTime.now();

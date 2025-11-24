@@ -8,30 +8,42 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { Upload, User, Mail, Users, Award } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
+import { imagesApi } from '../../lib/api/images';
 
 export function StudentProfile() {
   const { currentUser, updateProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [formData, setFormData] = useState({
     name: currentUser?.name || '',
     profilePhoto: currentUser?.profilePhoto || '',
   });
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, profilePhoto: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+      setUploadingPhoto(true);
+      try {
+        const response = await imagesApi.uploadImage(file);
+        setFormData({ ...formData, profilePhoto: response.url });
+        toast.success('Foto subida exitosamente');
+      } catch (error) {
+        console.error('Failed to upload photo:', error);
+        toast.error('Error al subir la foto. Por favor intenta de nuevo.');
+      } finally {
+        setUploadingPhoto(false);
+      }
     }
   };
 
-  const handleSave = () => {
-    updateProfile(formData);
-    setIsEditing(false);
-    toast.success('Perfil actualizado correctamente');
+  const handleSave = async () => {
+    try {
+      await updateProfile(formData);
+      setIsEditing(false);
+      toast.success('Perfil actualizado correctamente');
+    } catch (error) {
+      toast.error('Error al actualizar el perfil');
+    }
   };
 
   const getCategoryInfo = (category?: string) => {
@@ -67,10 +79,10 @@ export function StudentProfile() {
               <div>
                 <Label
                   htmlFor="photo-upload"
-                  className="flex items-center gap-2 px-4 py-2 border rounded-md cursor-pointer hover:bg-accent"
+                  className={`flex items-center gap-2 px-4 py-2 border rounded-md cursor-pointer hover:bg-accent ${uploadingPhoto ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <Upload className="size-4" />
-                  Cambiar foto
+                  {uploadingPhoto ? 'Subiendo...' : 'Cambiar foto'}
                 </Label>
                 <Input
                   id="photo-upload"

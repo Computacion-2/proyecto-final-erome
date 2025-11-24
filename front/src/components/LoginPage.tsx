@@ -21,15 +21,39 @@ export function LoginPage({ onSwitchToRegister }: LoginPageProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
-
-    const success = await login(email, password);
     
-    if (!success) {
-      setError('Correo o contraseña incorrectos');
+    console.log('Login form submitted', { email, hasPassword: !!password, passwordLength: password?.length, passwordValue: password ? '***' : 'empty' });
+    
+    if (!email || !email.trim()) {
+      setError('Por favor ingresa tu correo electrónico');
+      return;
     }
     
-    setLoading(false);
+    if (!password) {
+      setError('Por favor ingresa tu contraseña');
+      return;
+    }
+    
+    if (password.trim().length === 0) {
+      setError('Por favor ingresa tu contraseña');
+      return;
+    }
+    
+    setLoading(true);
+
+    try {
+      console.log('Calling login function', { email: email.trim(), passwordLength: password.length, passwordValue: password ? '***' : 'empty' });
+      const success = await login(email.trim(), password);
+      
+      if (!success) {
+        setError('Correo o contraseña incorrectos');
+      }
+    } catch (err: any) {
+      console.error('Login error caught in handleSubmit:', err);
+      setError(err?.message || 'Error al iniciar sesión. Por favor intenta de nuevo.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

@@ -1,12 +1,17 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { safeLocalStorage } from '../lib/storage';
+import { activitiesApi, Activity as ApiActivity } from '../lib/api/activities';
+import { exercisesApi, Exercise as ApiExercise } from '../lib/api/exercises';
+import { resolutionsApi, Resolution as ApiResolution } from '../lib/api/resolutions';
+import { useAuth } from './AuthContext';
 
 export interface Exercise {
   id: string;
   title: string;
   description: string;
-  difficulty: number; // 0-10
-  createdBy: string; // professor id
+  difficulty: number;
+  createdBy: string;
+  activityId?: string;
+  maxPoints?: number;
 }
 
 export interface Activity {
@@ -14,11 +19,11 @@ export interface Activity {
   title: string;
   group: string;
   exerciseIds: string[];
-  createdBy: string; // professor id
+  createdBy: string;
   isActive: boolean;
   startTime?: Date;
   endTime?: Date;
-  semester: string; // e.g., "2025-2"
+  semester: string;
 }
 
 export interface Submission {
@@ -28,101 +33,239 @@ export interface Submission {
   exerciseId: string;
   points: number;
   submittedAt: Date;
-  code?: string; // QR code or alphanumeric code
+  code?: string;
 }
 
 interface DataContextType {
   exercises: Exercise[];
   activities: Activity[];
   submissions: Submission[];
-  addExercise: (exercise: Exercise) => void;
-  updateExercise: (id: string, updates: Partial<Exercise>) => void;
-  deleteExercise: (id: string) => void;
-  addActivity: (activity: Activity) => void;
-  updateActivity: (id: string, updates: Partial<Activity>) => void;
-  deleteActivity: (id: string) => void;
-  addSubmission: (submission: Submission) => void;
+  loading: boolean;
+  addExercise: (exercise: Exercise) => Promise<void>;
+  updateExercise: (id: string, updates: Partial<Exercise>) => Promise<void>;
+  deleteExercise: (id: string) => Promise<void>;
+  addActivity: (activity: Activity) => Promise<void>;
+  updateActivity: (id: string, updates: Partial<Activity>) => Promise<void>;
+  deleteActivity: (id: string) => Promise<void>;
+  addSubmission: (submission: Submission) => Promise<void>;
   getCurrentSemester: () => string;
   getActiveActivity: (group: string) => Activity | undefined;
+  refreshData: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-// Helper to get current semester
 function getCurrentSemester(): string {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
-  
-  // Semester 1: January - June (1-6)
-  // Semester 2: July - December (7-12)
   const semester = month <= 6 ? 1 : 2;
-  
   return `${year}-${semester}`;
 }
 
+function mapApiExerciseToExercise(apiExercise: ApiExercise, createdBy?: string): Exercise {
+  return {
+    id: apiExercise.id.toString(),
+    title: apiExercise.title,
+    description: apiExercise.statement,
+    difficulty: apiExercise.difficulty,
+    createdBy: createdBy || '',
+    activityId: apiExercise.activityId?.toString(),
+    maxPoints: apiExercise.maxPoints,
+  };
+}
+
+function mapApiActivityToActivity(apiActivity: ApiActivity, exercises: Exercise[]): Activity {
+  const now = new Date();
+  const startTime = new Date(apiActivity.startTime);
+  const endTime = new Date(apiActivity.endTime);
+  const isActive = now >= startTime && now <= endTime && apiActivity.status === 'ACTIVE';
+
+  const exerciseIds = exercises
+    .filter(e => e.activityId === apiActivity.id.toString())
+    .map(e => e.id);
+
+  return {
+    id: apiActivity.id.toString(),
+    title: apiActivity.title,
+    group: apiActivity.group?.name || '',
+    exerciseIds,
+    createdBy: apiActivity.professorId?.toString() || '',
+    isActive,
+    startTime,
+    endTime,
+    semester: getCurrentSemester(),
+  };
+}
+
+function mapApiResolutionToSubmission(apiResolution: ApiResolution): Submission {
+  return {
+    id: apiResolution.id.toString(),
+    studentId: apiResolution.studentId.toString(),
+    activityId: apiResolution.exercise?.activityId?.toString() || '',
+    exerciseId: apiResolution.exerciseId.toString(),
+    points: apiResolution.pointsAwarded || 0,
+    submittedAt: new Date(apiResolution.submittedAt),
+    code: apiResolution.code,
+  };
+}
+
 export function DataProvider({ children }: { children: ReactNode }) {
+  const { currentUser } = useAuth();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Load data from localStorage
-  useEffect(() => {
-    const savedExercises = safeLocalStorage.getItem('exercises');
-    const savedActivities = safeLocalStorage.getItem('activities');
-    const savedSubmissions = safeLocalStorage.getItem('submissions');
-
-    if (savedExercises) setExercises(JSON.parse(savedExercises));
-    if (savedActivities) setActivities(JSON.parse(savedActivities));
-    if (savedSubmissions) {
-      const parsed = JSON.parse(savedSubmissions);
-      // Convert date strings back to Date objects
-      setSubmissions(parsed.map((s: any) => ({
-        ...s,
-        submittedAt: new Date(s.submittedAt)
-      })));
+  const refreshData = async () => {
+    if (!currentUser) {
+      setLoading(false);
+      return;
     }
-  }, []);
 
-  // Save to localStorage
+    try {
+      setLoading(true);
+      const [apiExercises, apiActivities] = await Promise.all([
+        exercisesApi.getAllExercises(),
+        activitiesApi.getAllActivities(),
+      ]);
+
+      const mappedExercises = apiExercises.map(e => mapApiExerciseToExercise(e));
+      setExercises(mappedExercises);
+
+      const mappedActivities = apiActivities.map(a => mapApiActivityToActivity(a, mappedExercises));
+      setActivities(mappedActivities);
+
+      if (currentUser.role === 'student') {
+        const apiResolutions = await resolutionsApi.getStudentResolutions(parseInt(currentUser.id));
+        const mappedSubmissions = apiResolutions.map(r => mapApiResolutionToSubmission(r));
+        setSubmissions(mappedSubmissions);
+      } else if (currentUser.role === 'professor' || currentUser.role === 'admin') {
+        const allResolutions: ApiResolution[] = [];
+        for (const activity of apiActivities) {
+          const activityResolutions = await resolutionsApi.getActivityResolutions(activity.id);
+          allResolutions.push(...activityResolutions);
+        }
+        const mappedSubmissions = allResolutions.map(r => mapApiResolutionToSubmission(r));
+        setSubmissions(mappedSubmissions);
+      }
+    } catch (error) {
+      console.error('Failed to refresh data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    safeLocalStorage.setItem('exercises', JSON.stringify(exercises));
-  }, [exercises]);
+    refreshData();
+  }, [currentUser]);
 
-  useEffect(() => {
-    safeLocalStorage.setItem('activities', JSON.stringify(activities));
-  }, [activities]);
+  const addExercise = async (exercise: Exercise) => {
+    try {
+      const apiExercise = await exercisesApi.createExercise({
+        title: exercise.title,
+        statement: exercise.description,
+        difficulty: exercise.difficulty,
+        maxPoints: exercise.maxPoints || 100,
+        activityId: parseInt(exercise.activityId || '0'),
+      });
 
-  useEffect(() => {
-    safeLocalStorage.setItem('submissions', JSON.stringify(submissions));
-  }, [submissions]);
-
-  const addExercise = (exercise: Exercise) => {
-    setExercises([...exercises, exercise]);
+      const newExercise = mapApiExerciseToExercise(apiExercise, exercise.createdBy);
+      setExercises([...exercises, newExercise]);
+    } catch (error) {
+      console.error('Failed to add exercise:', error);
+      throw error;
+    }
   };
 
-  const updateExercise = (id: string, updates: Partial<Exercise>) => {
-    setExercises(exercises.map(e => e.id === id ? { ...e, ...updates } : e));
+  const updateExercise = async (id: string, updates: Partial<Exercise>) => {
+    try {
+      const apiExercise = await exercisesApi.updateExercise(parseInt(id), {
+        title: updates.title,
+        statement: updates.description,
+        difficulty: updates.difficulty,
+        maxPoints: updates.maxPoints,
+      });
+
+      const updatedExercise = mapApiExerciseToExercise(apiExercise);
+      setExercises(exercises.map(e => e.id === id ? updatedExercise : e));
+    } catch (error) {
+      console.error('Failed to update exercise:', error);
+      throw error;
+    }
   };
 
-  const deleteExercise = (id: string) => {
-    setExercises(exercises.filter(e => e.id !== id));
+  const deleteExercise = async (id: string) => {
+    try {
+      await exercisesApi.deleteExercise(parseInt(id));
+      setExercises(exercises.filter(e => e.id !== id));
+    } catch (error) {
+      console.error('Failed to delete exercise:', error);
+      throw error;
+    }
   };
 
-  const addActivity = (activity: Activity) => {
-    setActivities([...activities, activity]);
+  const addActivity = async (activity: Activity) => {
+    try {
+      const groupId = 1; // TODO: Get actual group ID from group name
+      const apiActivity = await activitiesApi.createActivity({
+        title: activity.title,
+        groupId,
+        startTime: activity.startTime?.toISOString(),
+        endTime: activity.endTime?.toISOString(),
+        status: activity.isActive ? 'ACTIVE' : 'PENDING',
+      });
+
+      const newActivity = mapApiActivityToActivity(apiActivity, exercises);
+      setActivities([...activities, newActivity]);
+    } catch (error) {
+      console.error('Failed to add activity:', error);
+      throw error;
+    }
   };
 
-  const updateActivity = (id: string, updates: Partial<Activity>) => {
-    setActivities(activities.map(a => a.id === id ? { ...a, ...updates } : a));
+  const updateActivity = async (id: string, updates: Partial<Activity>) => {
+    try {
+      const apiActivity = await activitiesApi.updateActivity(parseInt(id), {
+        title: updates.title,
+        startTime: updates.startTime?.toISOString(),
+        endTime: updates.endTime?.toISOString(),
+        status: updates.isActive ? 'ACTIVE' : 'PENDING',
+      });
+
+      const updatedActivity = mapApiActivityToActivity(apiActivity, exercises);
+      setActivities(activities.map(a => a.id === id ? updatedActivity : a));
+    } catch (error) {
+      console.error('Failed to update activity:', error);
+      throw error;
+    }
   };
 
-  const deleteActivity = (id: string) => {
-    setActivities(activities.filter(a => a.id !== id));
+  const deleteActivity = async (id: string) => {
+    try {
+      await activitiesApi.deleteActivity(parseInt(id));
+      setActivities(activities.filter(a => a.id !== id));
+    } catch (error) {
+      console.error('Failed to delete activity:', error);
+      throw error;
+    }
   };
 
-  const addSubmission = (submission: Submission) => {
-    setSubmissions([...submissions, submission]);
+  const addSubmission = async (submission: Submission) => {
+    try {
+      const apiResolution = await resolutionsApi.submitResolution({
+        studentId: parseInt(submission.studentId),
+        exerciseId: parseInt(submission.exerciseId),
+        code: submission.code,
+        status: 'PENDING',
+      });
+
+      const newSubmission = mapApiResolutionToSubmission(apiResolution);
+      setSubmissions([...submissions, newSubmission]);
+    } catch (error) {
+      console.error('Failed to add submission:', error);
+      throw error;
+    }
   };
 
   const getActiveActivity = (group: string) => {
@@ -134,6 +277,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       exercises,
       activities,
       submissions,
+      loading,
       addExercise,
       updateExercise,
       deleteExercise,
@@ -143,6 +287,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       addSubmission,
       getCurrentSemester,
       getActiveActivity,
+      refreshData,
     }}>
       {children}
     </DataContext.Provider>

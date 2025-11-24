@@ -1,17 +1,39 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { safeLocalStorage } from '../lib/storage';
+import { authApi, User as ApiUser } from '../lib/api/auth';
+import { usersApi } from '../lib/api/users';
+import { ApiError } from '../lib/api';
 
 export interface User {
   id: string;
   email: string;
   name: string;
   role: 'student' | 'professor' | 'admin';
-  group?: string; // For students
+  group?: string;
   profilePhoto?: string;
-  studentRole?: 'pro' | 'killer' | 'principiante'; // Student's self-selected role
-  performanceCategory?: 'pro' | 'killer' | 'principiante'; // System-assigned category
-  groups?: string[]; // For professors - groups they teach
+  studentRole?: 'pro' | 'killer' | 'principiante';
+  performanceCategory?: 'pro' | 'killer' | 'principiante';
+  groups?: string[];
   totalPoints?: number;
+}
+
+function mapApiUserToUser(apiUser: ApiUser): User {
+  const roles = apiUser.role?.toLowerCase() || '';
+  let role: 'student' | 'professor' | 'admin' = 'student';
+  if (roles.includes('admin')) role = 'admin';
+  else if (roles.includes('professor')) role = 'professor';
+  else role = 'student';
+
+  return {
+    id: apiUser.id.toString(),
+    email: apiUser.email,
+    name: apiUser.name,
+    role,
+    group: apiUser.group,
+    profilePhoto: apiUser.photoUrl,
+    studentRole: apiUser.studentRole as 'pro' | 'killer' | 'principiante' | undefined,
+    performanceCategory: apiUser.performanceCategory as 'pro' | 'killer' | 'principiante' | undefined,
+    totalPoints: apiUser.totalPoints,
+  };
 }
 
 interface AuthContextType {
@@ -19,168 +41,200 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   register: (userData: Partial<User>, password: string) => Promise<boolean>;
-  updateProfile: (updates: Partial<User>) => void;
+  updateProfile: (updates: Partial<User>) => Promise<void>;
   users: User[];
-  updateUser: (userId: string, updates: Partial<User>) => void;
-  deleteUser: (userId: string) => void;
-  addUser: (user: User, password: string) => void;
+  updateUser: (userId: string, updates: Partial<User>) => Promise<void>;
+  deleteUser: (userId: string) => Promise<void>;
+  addUser: (user: User, password: string) => Promise<void>;
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock data - In production, this would be in Supabase
-const INITIAL_USERS: User[] = [
-  {
-    id: '1',
-    email: 'admin@u.icesi.edu.co',
-    name: 'Administrador',
-    role: 'admin',
-  },
-  {
-    id: '2',
-    email: 'jorge.quesada@icesi.edu.co',
-    name: 'Jorge Quesada',
-    role: 'professor',
-    groups: ['G1', 'G3', 'G5'],
-  },
-  {
-    id: '3',
-    email: 'maria.lopez@icesi.edu.co',
-    name: 'María López',
-    role: 'professor',
-    groups: ['G2', 'G4'],
-  },
-];
-
-const INITIAL_PASSWORDS: Record<string, string> = {
-  '1': 'admin123',
-  '2': 'prof123',
-  '3': 'prof123',
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
-  const [passwords, setPasswords] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load from localStorage
-    const savedUsers = safeLocalStorage.getItem('users');
-    const savedPasswords = safeLocalStorage.getItem('passwords');
-    const savedCurrentUser = safeLocalStorage.getItem('currentUser');
+    const initAuth = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const apiUser = await authApi.getCurrentUser();
+          setCurrentUser(mapApiUserToUser(apiUser));
+        }
+      } catch (error) {
+        console.error('Failed to get current user:', error);
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    if (savedUsers) {
-      setUsers(JSON.parse(savedUsers));
-    } else {
-      setUsers(INITIAL_USERS);
-      safeLocalStorage.setItem('users', JSON.stringify(INITIAL_USERS));
-    }
-
-    if (savedPasswords) {
-      setPasswords(JSON.parse(savedPasswords));
-    } else {
-      setPasswords(INITIAL_PASSWORDS);
-      safeLocalStorage.setItem('passwords', JSON.stringify(INITIAL_PASSWORDS));
-    }
-
-    if (savedCurrentUser) {
-      setCurrentUser(JSON.parse(savedCurrentUser));
-    }
+    initAuth();
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (user && passwords[user.id] === password) {
-      setCurrentUser(user);
-      safeLocalStorage.setItem('currentUser', JSON.stringify(user));
-      return true;
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const apiUsers = await usersApi.getAllUsers();
+        setUsers(apiUsers.map(mapApiUserToUser));
+      } catch (error) {
+        console.error('Failed to load users:', error);
+      }
+    };
+
+    if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'professor')) {
+      loadUsers();
     }
-    return false;
+  }, [currentUser]);
+
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      if (!email || !password) {
+        console.error('Login failed: email or password is empty', { email: !!email, password: !!password });
+        return false;
+      }
+      const response = await authApi.login(email.trim(), password);
+      const user = mapApiUserToUser(response.user);
+      setCurrentUser(user);
+      return true;
+    } catch (error: any) {
+      console.error('Login failed:', error);
+      if (error?.status === 400) {
+        console.error('Validation error:', error?.message);
+      }
+      return false;
+    }
   };
 
-  const logout = () => {
-    setCurrentUser(null);
-    safeLocalStorage.removeItem('currentUser');
+  const logout = async () => {
+    try {
+      await authApi.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setCurrentUser(null);
+      setUsers([]);
+    }
   };
 
   const register = async (userData: Partial<User>, password: string): Promise<boolean> => {
-    // Validate email domain for students
-    if (userData.email && !userData.email.endsWith('@u.icesi.edu.co') && !userData.email.endsWith('@icesi.edu.co')) {
-      return false;
+    try {
+      if (userData.email && !userData.email.endsWith('@u.icesi.edu.co') && !userData.email.endsWith('@icesi.edu.co')) {
+        return false;
+      }
+
+      const roleMap: Record<string, string> = {
+        'student': 'STUDENT',
+        'professor': 'PROFESSOR',
+        'admin': 'ADMIN'
+      };
+      
+      const apiUser = await authApi.register({
+        name: userData.name!,
+        email: userData.email!,
+        password,
+        role: roleMap[userData.role || 'student'] || 'STUDENT',
+        group: userData.group,
+        studentRole: userData.studentRole,
+      });
+
+      const user = mapApiUserToUser(apiUser);
+      setCurrentUser(user);
+      return true;
+    } catch (error: any) {
+      console.error('Registration failed:', error);
+      if (error?.status === 400 || error?.message?.includes('already exists') || error?.message?.includes('ya existe')) {
+        return false;
+      }
+      throw error;
     }
-
-    // Check if email already exists
-    if (users.find(u => u.email === userData.email)) {
-      return false;
-    }
-
-    const newUser: User = {
-      id: Date.now().toString(),
-      email: userData.email!,
-      name: userData.name!,
-      role: userData.role!,
-      group: userData.group,
-      profilePhoto: userData.profilePhoto,
-      studentRole: userData.studentRole,
-      totalPoints: 0,
-      performanceCategory: 'principiante',
-    };
-
-    const updatedUsers = [...users, newUser];
-    const updatedPasswords = { ...passwords, [newUser.id]: password };
-
-    setUsers(updatedUsers);
-    setPasswords(updatedPasswords);
-    safeLocalStorage.setItem('users', JSON.stringify(updatedUsers));
-    safeLocalStorage.setItem('passwords', JSON.stringify(updatedPasswords));
-
-    return true;
   };
 
-  const updateProfile = (updates: Partial<User>) => {
+  const updateProfile = async (updates: Partial<User>): Promise<void> => {
     if (!currentUser) return;
 
-    const updatedUser = { ...currentUser, ...updates };
-    setCurrentUser(updatedUser);
-    
-    const updatedUsers = users.map(u => u.id === currentUser.id ? updatedUser : u);
-    setUsers(updatedUsers);
-    
-    safeLocalStorage.setItem('currentUser', JSON.stringify(updatedUser));
-    safeLocalStorage.setItem('users', JSON.stringify(updatedUsers));
-  };
+    try {
+      const apiUser = await usersApi.updateUser(parseInt(currentUser.id), {
+        name: updates.name,
+        email: updates.email,
+        group: updates.group,
+        photoUrl: updates.profilePhoto,
+        studentRole: updates.studentRole,
+        performanceCategory: updates.performanceCategory,
+        totalPoints: updates.totalPoints,
+      });
 
-  const updateUser = (userId: string, updates: Partial<User>) => {
-    const updatedUsers = users.map(u => u.id === userId ? { ...u, ...updates } : u);
-    setUsers(updatedUsers);
-    safeLocalStorage.setItem('users', JSON.stringify(updatedUsers));
-
-    if (currentUser?.id === userId) {
-      const updatedCurrentUser = { ...currentUser, ...updates };
-      setCurrentUser(updatedCurrentUser);
-      safeLocalStorage.setItem('currentUser', JSON.stringify(updatedCurrentUser));
+      const updatedUser = mapApiUserToUser(apiUser);
+      setCurrentUser(updatedUser);
+      
+      setUsers(users.map(u => u.id === currentUser.id ? updatedUser : u));
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      throw error;
     }
   };
 
-  const deleteUser = (userId: string) => {
-    const updatedUsers = users.filter(u => u.id !== userId);
-    setUsers(updatedUsers);
-    safeLocalStorage.setItem('users', JSON.stringify(updatedUsers));
+  const updateUser = async (userId: string, updates: Partial<User>): Promise<void> => {
+    try {
+      const apiUser = await usersApi.updateUser(parseInt(userId), {
+        name: updates.name,
+        email: updates.email,
+        group: updates.group,
+        photoUrl: updates.profilePhoto,
+        studentRole: updates.studentRole,
+        performanceCategory: updates.performanceCategory,
+        totalPoints: updates.totalPoints,
+      });
 
-    const updatedPasswords = { ...passwords };
-    delete updatedPasswords[userId];
-    setPasswords(updatedPasswords);
-    safeLocalStorage.setItem('passwords', JSON.stringify(updatedPasswords));
+      const updatedUser = mapApiUserToUser(apiUser);
+      setUsers(users.map(u => u.id === userId ? updatedUser : u));
+
+      if (currentUser?.id === userId) {
+        setCurrentUser(updatedUser);
+      }
+    } catch (error) {
+      console.error('Failed to update user:', error);
+      throw error;
+    }
   };
 
-  const addUser = (user: User, password: string) => {
-    const updatedUsers = [...users, user];
-    const updatedPasswords = { ...passwords, [user.id]: password };
-    
-    setUsers(updatedUsers);
-    setPasswords(updatedPasswords);
-    safeLocalStorage.setItem('users', JSON.stringify(updatedUsers));
-    safeLocalStorage.setItem('passwords', JSON.stringify(updatedPasswords));
+  const deleteUser = async (userId: string): Promise<void> => {
+    try {
+      await usersApi.deleteUser(parseInt(userId));
+      setUsers(users.filter(u => u.id !== userId));
+
+      if (currentUser?.id === userId) {
+        setCurrentUser(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      throw error;
+    }
+  };
+
+  const addUser = async (user: User, password: string): Promise<void> => {
+    try {
+      const apiUser = await usersApi.createUser({
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        group: user.group,
+        photoUrl: user.profilePhoto,
+        studentRole: user.studentRole,
+        performanceCategory: user.performanceCategory,
+        totalPoints: user.totalPoints,
+      });
+
+      const newUser = mapApiUserToUser(apiUser);
+      setUsers([...users, newUser]);
+    } catch (error) {
+      console.error('Failed to add user:', error);
+      throw error;
+    }
   };
 
   return (
@@ -194,6 +248,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateUser,
       deleteUser,
       addUser,
+      loading,
     }}>
       {children}
     </AuthContext.Provider>
