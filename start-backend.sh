@@ -11,12 +11,19 @@ NC='\033[0m'
 echo -e "${GREEN}=== Iniciando Backend ===${NC}"
 echo ""
 
-# Configurar JAVA_HOME si no está configurado
-if [ -z "$JAVA_HOME" ]; then
-    if [ -d "/usr/lib/jvm/java-21-openjdk" ]; then
-        export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
-        echo -e "${YELLOW}⚠${NC} JAVA_HOME no estaba configurado, usando: $JAVA_HOME"
+# Configurar JAVA_HOME para usar Java 21
+if [ -d "/usr/lib/jvm/java-21-openjdk" ]; then
+    OLD_JAVA_HOME="$JAVA_HOME"
+    export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+    export PATH=$JAVA_HOME/bin:$PATH
+    if [ -n "$OLD_JAVA_HOME" ] && [ "$OLD_JAVA_HOME" != "$JAVA_HOME" ]; then
+        echo -e "${YELLOW}⚠${NC} JAVA_HOME estaba configurado a otra versión ($OLD_JAVA_HOME), actualizando a: $JAVA_HOME"
+    else
+        echo "Usando Java 21: $JAVA_HOME"
     fi
+else
+    echo -e "${YELLOW}⚠${NC} Java 21 no encontrado en /usr/lib/jvm/java-21-openjdk"
+    exit 1
 fi
 
 # Activar perfiles de Spring Boot
