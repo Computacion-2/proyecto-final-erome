@@ -19,20 +19,20 @@ class ApiClient {
   }
 
   private getToken(): string | null {
-    return localStorage.getItem('token');
+    return sessionStorage.getItem('token');
   }
 
   private setToken(token: string): void {
-    localStorage.setItem('token', token);
+    sessionStorage.setItem('token', token);
   }
 
   private removeToken(): void {
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('refreshToken');
   }
 
   private async refreshToken(): Promise<boolean> {
-    const refreshToken = localStorage.getItem('refreshToken');
+    const refreshToken = sessionStorage.getItem('refreshToken');
     if (!refreshToken) {
       return false;
     }
@@ -50,7 +50,7 @@ class ApiClient {
         const data = await response.json();
         this.setToken(data.token);
         if (data.refreshToken) {
-          localStorage.setItem('refreshToken', data.refreshToken);
+          sessionStorage.setItem('refreshToken', data.refreshToken);
         }
         return true;
       }
@@ -198,7 +198,7 @@ class ApiClient {
   setAuthTokens(token: string, refreshToken?: string): void {
     this.setToken(token);
     if (refreshToken) {
-      localStorage.setItem('refreshToken', refreshToken);
+      sessionStorage.setItem('refreshToken', refreshToken);
     }
   }
 

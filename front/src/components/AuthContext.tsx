@@ -62,15 +62,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         if (token) {
           const apiUser = await authApi.getCurrentUser();
           setCurrentUser(mapApiUserToUser(apiUser));
         }
       } catch (error) {
         console.error('Failed to get current user:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('refreshToken');
       } finally {
         setLoading(false);
       }
