@@ -63,7 +63,7 @@ export function AdminDashboard() {
         email: formData.email,
         role: formData.role, // Include role so backend knows if it's a professor
         group: formData.role === 'student' ? formData.group : undefined,
-        groups: formData.role === 'professor' ? formData.groups : undefined,
+        groups: formData.role === 'professor' ? formData.groups : [], // Always send groups array for professors, even if empty
       });
       toast.success('Usuario actualizado');
     } else {

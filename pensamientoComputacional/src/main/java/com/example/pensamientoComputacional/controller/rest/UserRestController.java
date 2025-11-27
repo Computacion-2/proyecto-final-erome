@@ -318,65 +318,71 @@ public class UserRestController {
         }
         
         // Handle professor groups if user is a professor
-        if (isProfessor && userDto.getGroups() != null && !userDto.getGroups().isEmpty()) {
+        // Process groups even if empty/null to clean up assignments
+        if (isProfessor && userDto.getGroups() != null) {
             System.out.println("Processing professor groups update for user " + id + ": " + userDto.getGroups());
             
             Professor professor = professorRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Professor entity not found"));
             
-            // Delete existing assignments
+            // Delete existing assignments first
             professorAssignmentRepository.deleteByProfessorId(id);
             System.out.println("Deleted existing assignments for professor " + id);
             
-            // Get active semester
-            List<Semester> activeSemesters = semesterRepository.findByIsActiveTrue();
-            Semester activeSemester = activeSemesters.isEmpty() ? null : activeSemesters.get(0);
-            
-            if (activeSemester == null) {
-                System.out.println("WARNING: No active semester found. Cannot assign groups to professor.");
-            } else {
-                System.out.println("Active semester found: " + activeSemester.getCode());
+            // Only create new assignments if groups list is not empty
+            if (!userDto.getGroups().isEmpty()) {
+                // Get active semester
+                List<Semester> activeSemesters = semesterRepository.findByIsActiveTrue();
+                Semester activeSemester = activeSemesters.isEmpty() ? null : activeSemesters.get(0);
                 
-                // Get all groups to see what's available
-                List<Group> allGroups = groupRepository.findAll();
-                System.out.println("Available groups in database: " + allGroups.stream().map(Group::getName).collect(Collectors.toList()));
-                
-                // Create new professor assignments for each group
-                for (String groupName : userDto.getGroups()) {
-                    System.out.println("Looking for group: " + groupName);
-                    Group group = groupRepository.findByName(groupName)
-                            .orElseGet(() -> {
-                                // Try case-insensitive search
-                                Group found = allGroups.stream()
-                                        .filter(g -> g.getName().equalsIgnoreCase(groupName))
-                                        .findFirst()
-                                        .orElse(null);
-                                
-                                // If group doesn't exist, create it
-                                if (found == null) {
-                                    System.out.println("Group '" + groupName + "' not found. Creating it...");
-                                    Group newGroup = new Group();
-                                    newGroup.setName(groupName);
-                                    newGroup.setSemester(activeSemester);
-                                    found = groupRepository.save(newGroup);
-                                    System.out.println("Created new group: " + found.getName() + " (ID: " + found.getId() + ")");
-                                }
-                                
-                                return found;
-                            });
+                if (activeSemester == null) {
+                    System.out.println("WARNING: No active semester found. Cannot assign groups to professor.");
+                } else {
+                    System.out.println("Active semester found: " + activeSemester.getCode());
                     
-                    if (group != null) {
-                        System.out.println("Found/created group: " + group.getName() + " (ID: " + group.getId() + ")");
-                        ProfessorAssignment assignment = new ProfessorAssignment();
-                        assignment.setProfessor(professor);
-                        assignment.setGroup(group);
-                        assignment.setSemester(activeSemester);
-                        professorAssignmentRepository.save(assignment);
-                        System.out.println("Created assignment for professor " + professor.getId() + " and group " + group.getName());
-                    } else {
-                        System.out.println("ERROR: Could not find or create group '" + groupName + "'. Skipping assignment.");
+                    // Get all groups to see what's available
+                    List<Group> allGroups = groupRepository.findAll();
+                    System.out.println("Available groups in database: " + allGroups.stream().map(Group::getName).collect(Collectors.toList()));
+                    
+                    // Create new professor assignments for each group
+                    for (String groupName : userDto.getGroups()) {
+                        System.out.println("Looking for group: " + groupName);
+                        Group group = groupRepository.findByName(groupName)
+                                .orElseGet(() -> {
+                                    // Try case-insensitive search
+                                    Group found = allGroups.stream()
+                                            .filter(g -> g.getName().equalsIgnoreCase(groupName))
+                                            .findFirst()
+                                            .orElse(null);
+                                    
+                                    // If group doesn't exist, create it
+                                    if (found == null) {
+                                        System.out.println("Group '" + groupName + "' not found. Creating it...");
+                                        Group newGroup = new Group();
+                                        newGroup.setName(groupName);
+                                        newGroup.setSemester(activeSemester);
+                                        found = groupRepository.save(newGroup);
+                                        System.out.println("Created new group: " + found.getName() + " (ID: " + found.getId() + ")");
+                                    }
+                                    
+                                    return found;
+                                });
+                        
+                        if (group != null) {
+                            System.out.println("Found/created group: " + group.getName() + " (ID: " + group.getId() + ")");
+                            ProfessorAssignment assignment = new ProfessorAssignment();
+                            assignment.setProfessor(professor);
+                            assignment.setGroup(group);
+                            assignment.setSemester(activeSemester);
+                            professorAssignmentRepository.save(assignment);
+                            System.out.println("Created assignment for professor " + professor.getId() + " and group " + group.getName());
+                        } else {
+                            System.out.println("ERROR: Could not find or create group '" + groupName + "'. Skipping assignment.");
+                        }
                     }
                 }
+            } else {
+                System.out.println("Groups list is empty. All assignments have been removed for professor " + id);
             }
         }
         
