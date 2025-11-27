@@ -4,6 +4,11 @@ import com.example.pensamientoComputacional.mapper.StudentMapper;
 import com.example.pensamientoComputacional.model.dto.StudentDto;
 import com.example.pensamientoComputacional.model.entities.Student;
 import com.example.pensamientoComputacional.repository.StudentRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -17,6 +22,8 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/students")
 @CrossOrigin(origins = "*")
+@Tag(name = "Students", description = "Gestión de estudiantes")
+@SecurityRequirement(name = "bearerAuth")
 public class StudentRestController {
 
     @Autowired
@@ -26,9 +33,31 @@ public class StudentRestController {
     private StudentMapper studentMapper;
 
     @GetMapping
-    @PreAuthorize("hasAuthority('READ_USER') or hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('READ_USER') or hasRole('ADMIN') or hasRole('PROFESSOR')")
     public ResponseEntity<List<StudentDto>> getAllStudents() {
         List<Student> students = studentRepository.findAll();
+        List<StudentDto> studentDtos = students.stream()
+                .map(studentMapper::entityToDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(studentDtos);
+    }
+
+    @GetMapping("/group/{groupName}")
+    @PreAuthorize("hasRole('PROFESSOR') or hasRole('ADMIN')")
+    @Operation(summary = "Obtener estudiantes por grupo", description = "Retorna todos los estudiantes de un grupo específico")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista de estudiantes obtenida exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autorizado"),
+            @ApiResponse(responseCode = "403", description = "Sin permisos suficientes")
+    })
+    public ResponseEntity<List<StudentDto>> getStudentsByGroup(@PathVariable String groupName) {
+        List<Student> students = studentRepository.findAll().stream()
+                .filter(student -> {
+                    String studentGroup = student.getUser().getGroup();
+                    return studentGroup != null && studentGroup.equalsIgnoreCase(groupName);
+                })
+                .collect(Collectors.toList());
+        
         List<StudentDto> studentDtos = students.stream()
                 .map(studentMapper::entityToDto)
                 .collect(Collectors.toList());

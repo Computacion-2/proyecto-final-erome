@@ -29,7 +29,10 @@ public class UserService {
             throw new BusinessException("User with email " + user.getEmail() + " already exists");
         }
         
+        // Only validate roles if they are provided
+        if (user.getRoles() != null && !user.getRoles().isEmpty()) {
         validateRoles(user.getRoles());
+        }
         return userRepository.save(user);
     }
     
@@ -37,18 +40,36 @@ public class UserService {
         User existingUser = userRepository.findById(id)
             .orElseThrow(() -> new BusinessException("User not found with id: " + id));
             
-        if (!existingUser.getEmail().equals(user.getEmail()) &&
+        // Validar email único solo si está cambiando
+        if (user.getEmail() != null && !existingUser.getEmail().equals(user.getEmail()) &&
             userRepository.existsByEmail(user.getEmail())) {
             throw new BusinessException("User with email " + user.getEmail() + " already exists");
         }
         
-        validateRoles(user.getRoles());
-        
+        // Actualizar solo los campos que vienen en el request
+        if (user.getName() != null) {
         existingUser.setName(user.getName());
+        }
+        if (user.getEmail() != null) {
         existingUser.setEmail(user.getEmail());
+        }
+        if (user.getPhotoUrl() != null) {
         existingUser.setPhotoUrl(user.getPhotoUrl());
+        }
+        if (user.getIsActive() != null) {
         existingUser.setIsActive(user.getIsActive());
+        }
+        if (user.getGroup() != null) {
+            existingUser.setGroup(user.getGroup());
+        }
+        
+        // Solo actualizar roles si vienen en el request (para admins)
+        // Preservar roles existentes si no se envían
+        if (user.getRoles() != null && !user.getRoles().isEmpty()) {
+            validateRoles(user.getRoles());
         existingUser.setRoles(user.getRoles());
+        }
+        // Si no se envían roles, se mantienen los existentes (no se hace nada)
         
         return userRepository.save(existingUser);
     }

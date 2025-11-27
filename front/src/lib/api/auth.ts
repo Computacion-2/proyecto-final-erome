@@ -27,6 +27,7 @@ export interface User {
   email: string;
   role?: string;
   group?: string;
+  groups?: string[]; // For professors
   photoUrl?: string;
   studentRole?: string;
   performanceCategory?: string;

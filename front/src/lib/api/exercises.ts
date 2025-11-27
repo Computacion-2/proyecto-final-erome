@@ -2,7 +2,7 @@ import { apiClient } from '../api';
 
 export interface Exercise {
   id: number;
-  activityId: number;
+  activityId?: number | null;
   title: string;
   statement: string;
   difficulty: number;

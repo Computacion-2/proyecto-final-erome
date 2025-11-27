@@ -61,6 +61,7 @@ export function AdminDashboard() {
       updateUser(editingUser.id, {
         name: formData.name,
         email: formData.email,
+        role: formData.role, // Include role so backend knows if it's a professor
         group: formData.role === 'student' ? formData.group : undefined,
         groups: formData.role === 'professor' ? formData.groups : undefined,
       });

@@ -11,7 +11,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -74,7 +73,7 @@ public class ExerciseRestController {
         List<Exercise> exercises = exerciseRepository.findAll().stream()
                 .filter(exercise -> exercise.getActivity().getId().equals(activityId))
                 .collect(Collectors.toList());
-        
+
         List<ExerciseDto> exerciseDtos = exercises.stream()
                 .map(exerciseMapper::entityToDto)
                 .collect(Collectors.toList());
@@ -88,18 +87,45 @@ public class ExerciseRestController {
             @ApiResponse(responseCode = "201", description = "Ejercicio creado exitosamente"),
             @ApiResponse(responseCode = "400", description = "Datos inválidos"),
             @ApiResponse(responseCode = "401", description = "No autorizado"),
-            @ApiResponse(responseCode = "403", description = "Sin permisos suficientes")
+            @ApiResponse(responseCode = "403", description = "Sin permisos suficientes"),
+            @ApiResponse(responseCode = "500", description = "Error interno del servidor")
     })
-    public ResponseEntity<ExerciseDto> createExercise(@Valid @RequestBody ExerciseDto exerciseDto) {
-        Activity activity = activityRepository.findById(exerciseDto.getActivityId())
-                .orElseThrow(() -> new RuntimeException("Actividad no encontrada"));
+    public ResponseEntity<ExerciseDto> createExercise(@RequestBody ExerciseDto exerciseDto) {
+        try {
+            // Validate required fields
+            if (exerciseDto.getTitle() == null || exerciseDto.getTitle().trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+            if (exerciseDto.getStatement() == null || exerciseDto.getStatement().trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+            if (exerciseDto.getDifficulty() == null || exerciseDto.getDifficulty() < 1 || exerciseDto.getDifficulty() > 10) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+            if (exerciseDto.getMaxPoints() == null || exerciseDto.getMaxPoints() < 1) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+            
+            Exercise exercise = exerciseMapper.dtoToEntity(exerciseDto);
+            
+            // Activity is optional - exercises can be created first and assigned to activities later
+            // Only set activity if activityId is provided and > 0
+            if (exerciseDto.getActivityId() != null && exerciseDto.getActivityId() > 0) {
+                Activity activity = activityRepository.findById(exerciseDto.getActivityId())
+                        .orElseThrow(() -> new RuntimeException("Actividad no encontrada"));
+                exercise.setActivity(activity);
+            }
 
-        Exercise exercise = exerciseMapper.dtoToEntity(exerciseDto);
-        exercise.setActivity(activity);
-
-        Exercise savedExercise = exerciseRepository.save(exercise);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(exerciseMapper.entityToDto(savedExercise));
+            Exercise savedExercise = exerciseRepository.save(exercise);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(exerciseMapper.entityToDto(savedExercise));
+        } catch (RuntimeException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @PutMapping("/{id}")
@@ -111,21 +137,54 @@ public class ExerciseRestController {
             @ApiResponse(responseCode = "401", description = "No autorizado"),
             @ApiResponse(responseCode = "403", description = "Sin permisos suficientes")
     })
-    public ResponseEntity<ExerciseDto> updateExercise(@PathVariable Long id, @Valid @RequestBody ExerciseDto exerciseDto) {
-        return exerciseRepository.findById(id)
-                .map(existingExercise -> {
-                    exerciseDto.setId(id);
+    public ResponseEntity<ExerciseDto> updateExercise(@PathVariable Long id,
+            @RequestBody ExerciseDto exerciseDto) {
+        try {
+            return exerciseRepository.findById(id)
+                    .map(existingExercise -> {
+                    // IMPORTANT: Get the existing activity ID before any updates
+                    // This ensures we preserve it even if the DTO doesn't include it
+                    Long existingActivityId = existingExercise.getActivity() != null 
+                            ? existingExercise.getActivity().getId() 
+                            : null;
                     
-                    if (exerciseDto.getActivityId() != null) {
+                    System.out.println("=== UPDATE EXERCISE DEBUG ===");
+                    System.out.println("Exercise ID: " + id);
+                    System.out.println("Existing Activity ID: " + existingActivityId);
+                    System.out.println("DTO Activity ID: " + exerciseDto.getActivityId());
+                    System.out.println("DTO Title: " + exerciseDto.getTitle());
+                    
+                    exerciseDto.setId(id);
+
+                    // Only update activity if activityId is explicitly provided and > 0
+                    // If activityId is null, 0, or not provided, preserve the existing activity
+                    if (exerciseDto.getActivityId() != null && exerciseDto.getActivityId() > 0) {
+                        // User wants to change the activity
+                        System.out.println("Changing activity to: " + exerciseDto.getActivityId());
                         Activity activity = activityRepository.findById(exerciseDto.getActivityId())
                                 .orElseThrow(() -> new RuntimeException("Actividad no encontrada"));
                         existingExercise.setActivity(activity);
+                    } else if (existingActivityId != null) {
+                        // Preserve the existing activity - reload it from database
+                        System.out.println("Preserving existing activity: " + existingActivityId);
+                        Activity existingActivity = activityRepository.findById(existingActivityId)
+                                .orElse(null);
+                        if (existingActivity != null) {
+                            existingExercise.setActivity(existingActivity);
+                            System.out.println("Activity preserved successfully");
+                        } else {
+                            System.out.println("WARNING: Existing activity not found in database!");
+                        }
+                    } else {
+                        System.out.println("No activity to preserve (exercise has no activity)");
                     }
-                    
-                    if (exerciseDto.getTitle() != null) {
+                    // If both are null, exercise has no activity (which is allowed)
+
+                    // Update other fields only if provided
+                    if (exerciseDto.getTitle() != null && !exerciseDto.getTitle().trim().isEmpty()) {
                         existingExercise.setTitle(exerciseDto.getTitle());
                     }
-                    if (exerciseDto.getStatement() != null) {
+                    if (exerciseDto.getStatement() != null && !exerciseDto.getStatement().trim().isEmpty()) {
                         existingExercise.setStatement(exerciseDto.getStatement());
                     }
                     if (exerciseDto.getDifficulty() != null) {
@@ -136,9 +195,21 @@ public class ExerciseRestController {
                     }
 
                     Exercise updatedExercise = exerciseRepository.save(existingExercise);
+                    System.out.println("Final Activity ID after save: " + 
+                            (updatedExercise.getActivity() != null ? updatedExercise.getActivity().getId() : "null"));
+                    System.out.println("=== END UPDATE EXERCISE DEBUG ===");
                     return ResponseEntity.ok(exerciseMapper.entityToDto(updatedExercise));
-                })
-                .orElse(ResponseEntity.notFound().build());
+                    })
+                    .orElse(ResponseEntity.notFound().build());
+        } catch (RuntimeException e) {
+            System.err.println("Error updating exercise: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        } catch (Exception e) {
+            System.err.println("Unexpected error updating exercise: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @DeleteMapping("/{id}")
@@ -158,4 +229,3 @@ public class ExerciseRestController {
         return ResponseEntity.noContent().build();
     }
 }
-

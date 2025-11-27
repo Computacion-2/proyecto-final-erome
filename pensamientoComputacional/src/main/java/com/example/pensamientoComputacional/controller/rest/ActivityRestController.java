@@ -108,35 +108,51 @@ public class ActivityRestController {
             @ApiResponse(responseCode = "401", description = "No autorizado"),
             @ApiResponse(responseCode = "403", description = "Sin permisos suficientes")
     })
-    public ResponseEntity<ActivityDto> createActivity(@Valid @RequestBody ActivityDto activityDto) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    public ResponseEntity<ActivityDto> createActivity(@RequestBody ActivityDto activityDto) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            String email = authentication.getName();
+            User user = userService.findByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+
+            Professor professor = professorRepository.findById(user.getId())
+                    .orElseThrow(() -> new RuntimeException("Usuario no es un profesor"));
+
+            Group group = groupRepository.findById(activityDto.getGroupId())
+                    .orElseThrow(() -> new RuntimeException("Grupo no encontrado"));
+
+            Activity activity = activityMapper.dtoToEntity(activityDto);
+            activity.setProfessor(professor);
+            activity.setGroup(group);
+            
+            if (activity.getStatus() == null) {
+                activity.setStatus("PENDING");
+            }
+            
+            // Set default start and end times if not provided
+            if (activity.getStartTime() == null) {
+                activity.setStartTime(LocalDateTime.now());
+            }
+            if (activity.getEndTime() == null) {
+                activity.setEndTime(LocalDateTime.now().plusDays(7)); // Default: 7 days from now
+            }
+
+            Activity savedActivity = activityRepository.save(activity);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(activityMapper.entityToDto(savedActivity));
+        } catch (RuntimeException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-
-        String email = authentication.getName();
-        User user = userService.findByEmail(email);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        Professor professor = professorRepository.findById(user.getId())
-                .orElseThrow(() -> new RuntimeException("Usuario no es un profesor"));
-
-        Group group = groupRepository.findById(activityDto.getGroupId())
-                .orElseThrow(() -> new RuntimeException("Grupo no encontrado"));
-
-        Activity activity = activityMapper.dtoToEntity(activityDto);
-        activity.setProfessor(professor);
-        activity.setGroup(group);
-        
-        if (activity.getStatus() == null) {
-            activity.setStatus("PENDING");
-        }
-
-        Activity savedActivity = activityRepository.save(activity);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(activityMapper.entityToDto(savedActivity));
     }
 
     @PutMapping("/{id}")

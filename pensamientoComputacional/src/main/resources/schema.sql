@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS activities (
 -- Tabla de ejercicios
 CREATE TABLE IF NOT EXISTS exercises (
     id BIGSERIAL PRIMARY KEY,
-    activity_id BIGINT NOT NULL,
+    activity_id BIGINT,
     title VARCHAR(255) NOT NULL,
     statement TEXT NOT NULL,
     difficulty INTEGER NOT NULL,
@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS exercise_profiles (
 -- Tabla de eventos del tablero de puntuación
 CREATE TABLE IF NOT EXISTS scoreboard_events (
     id BIGSERIAL PRIMARY KEY,
-    activity_id BIGINT NOT NULL,
+    activity_id BIGINT,
     student_id BIGINT NOT NULL,
     exercise_id BIGINT NOT NULL,
     message VARCHAR(255) NOT NULL,

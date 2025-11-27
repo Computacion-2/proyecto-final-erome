@@ -75,15 +75,22 @@ function mapApiExerciseToExercise(apiExercise: ApiExercise, createdBy?: string):
   };
 }
 
-function mapApiActivityToActivity(apiActivity: ApiActivity, exercises: Exercise[]): Activity {
+function mapApiActivityToActivity(apiActivity: ApiActivity, exercises: Exercise[], fallbackExerciseIds?: string[]): Activity {
   const now = new Date();
   const startTime = new Date(apiActivity.startTime);
   const endTime = new Date(apiActivity.endTime);
   const isActive = now >= startTime && now <= endTime && apiActivity.status === 'ACTIVE';
 
-  const exerciseIds = exercises
+  // Find exercises that belong to this activity
+  let exerciseIds = exercises
     .filter(e => e.activityId === apiActivity.id.toString())
     .map(e => e.id);
+
+  // If no exercises found and fallback is provided, use it
+  if (exerciseIds.length === 0 && fallbackExerciseIds && fallbackExerciseIds.length > 0) {
+    console.log('Using fallback exerciseIds for activity', apiActivity.id, fallbackExerciseIds);
+    exerciseIds = fallbackExerciseIds;
+  }
 
   return {
     id: apiActivity.id.toString(),
@@ -158,17 +165,35 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refreshData();
+    
+    // Auto-refresh every 10 seconds for students to see new activities
+    if (currentUser?.role === 'student') {
+      const interval = setInterval(() => {
+        refreshData();
+      }, 10000); // Refresh every 10 seconds
+      
+      return () => clearInterval(interval);
+    }
   }, [currentUser]);
 
   const addExercise = async (exercise: Exercise) => {
     try {
-      const apiExercise = await exercisesApi.createExercise({
+      const exerciseData: any = {
         title: exercise.title,
         statement: exercise.description,
         difficulty: exercise.difficulty,
         maxPoints: exercise.maxPoints || 100,
-        activityId: parseInt(exercise.activityId || '0'),
-      });
+      };
+      
+      // Only include activityId if it's a valid number (not 0 or empty)
+      if (exercise.activityId && exercise.activityId !== '0') {
+        const activityIdNum = parseInt(exercise.activityId);
+        if (activityIdNum > 0) {
+          exerciseData.activityId = activityIdNum;
+        }
+      }
+      
+      const apiExercise = await exercisesApi.createExercise(exerciseData);
 
       const newExercise = mapApiExerciseToExercise(apiExercise, exercise.createdBy);
       setExercises([...exercises, newExercise]);
@@ -180,17 +205,47 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const updateExercise = async (id: string, updates: Partial<Exercise>) => {
     try {
-      const apiExercise = await exercisesApi.updateExercise(parseInt(id), {
+      // Find existing exercise in state to preserve createdBy
+      const existingExercise = exercises.find(e => e.id === id);
+      
+      // First, get the current exercise from the backend to ensure we have the latest data
+      const currentApiExercise = await exercisesApi.getExerciseById(parseInt(id));
+      
+      console.log('Current exercise from backend:', currentApiExercise);
+      console.log('Existing exercise in state:', existingExercise);
+      
+      const updateData: any = {
         title: updates.title,
         statement: updates.description,
         difficulty: updates.difficulty,
         maxPoints: updates.maxPoints,
-      });
+      };
+      
+      // CRITICAL: Always preserve activityId from the current exercise in the database
+      // Even if it's null, we need to explicitly handle it
+      if (currentApiExercise.activityId != null && currentApiExercise.activityId > 0) {
+        updateData.activityId = currentApiExercise.activityId;
+        console.log('Preserving activityId:', updateData.activityId);
+      } else {
+        console.log('No activityId to preserve (exercise has no activity)');
+      }
+      
+      console.log('Updating exercise with data:', JSON.stringify(updateData, null, 2));
+      
+      const apiExercise = await exercisesApi.updateExercise(parseInt(id), updateData);
+      
+      console.log('Updated exercise response:', apiExercise);
 
-      const updatedExercise = mapApiExerciseToExercise(apiExercise);
+      // Preserve createdBy from existing exercise in state
+      const updatedExercise = mapApiExerciseToExercise(apiExercise, existingExercise?.createdBy);
+      console.log('Mapped exercise with createdBy:', updatedExercise);
+      
+      // Only update the state if the update was successful
       setExercises(exercises.map(e => e.id === id ? updatedExercise : e));
+      return updatedExercise;
     } catch (error) {
       console.error('Failed to update exercise:', error);
+      // Don't remove the exercise from state if update fails
       throw error;
     }
   };
@@ -207,17 +262,77 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const addActivity = async (activity: Activity) => {
     try {
-      const groupId = 1; // TODO: Get actual group ID from group name
+      // Get group ID from group name
+      const { groupsApi } = await import('../lib/api/groups');
+      const group = await groupsApi.getGroupByName(activity.group);
+      
+      if (!group || !group.id) {
+        throw new Error(`Grupo ${activity.group} no encontrado`);
+      }
+
+      // Create the activity
       const apiActivity = await activitiesApi.createActivity({
         title: activity.title,
-        groupId,
+        groupId: group.id,
         startTime: activity.startTime?.toISOString(),
         endTime: activity.endTime?.toISOString(),
         status: activity.isActive ? 'ACTIVE' : 'PENDING',
       });
 
-      const newActivity = mapApiActivityToActivity(apiActivity, exercises);
+      // Associate selected exercises with the new activity
+      if (activity.exerciseIds && activity.exerciseIds.length > 0) {
+        console.log('Associating exercises with activity:', apiActivity.id, activity.exerciseIds);
+        
+        // Update each selected exercise to associate it with the new activity
+        const updatePromises = activity.exerciseIds.map(async (exerciseId) => {
+          try {
+            // Get the current exercise from backend to preserve all its data
+            const currentExercise = await exercisesApi.getExerciseById(parseInt(exerciseId));
+            
+            // Update the exercise with the activityId
+            await exercisesApi.updateExercise(parseInt(exerciseId), {
+              title: currentExercise.title,
+              statement: currentExercise.statement,
+              difficulty: currentExercise.difficulty,
+              maxPoints: currentExercise.maxPoints,
+              activityId: apiActivity.id, // Associate with the new activity
+            });
+          } catch (error) {
+            console.error(`Failed to associate exercise ${exerciseId} with activity:`, error);
+          }
+        });
+        
+        await Promise.all(updatePromises);
+      }
+
+      // Refresh data to get updated exercises with activityId
+      await refreshData();
+      
+      // Get fresh exercises from backend to ensure we have the latest activityId values
+      const updatedExercises = await exercisesApi.getAllExercises();
+      console.log('Updated exercises from backend:', updatedExercises);
+      
+      const mappedExercises = updatedExercises.map(e => {
+        const existing = exercises.find(ex => ex.id === e.id.toString());
+        const mapped = mapApiExerciseToExercise(e, existing?.createdBy);
+        console.log(`Exercise ${mapped.id}: activityId = ${mapped.activityId}, expected activityId = ${apiActivity.id}`);
+        return mapped;
+      });
+      
+      // Filter exercises that belong to this activity
+      const activityExercises = mappedExercises.filter(e => e.activityId === apiActivity.id.toString());
+      console.log(`Found ${activityExercises.length} exercises for activity ${apiActivity.id}:`, activityExercises.map(e => e.id));
+      
+      // Update exercises state with fresh data
+      setExercises(mappedExercises);
+      
+      // Map the activity with updated exercises, using original exerciseIds as fallback
+      const newActivity = mapApiActivityToActivity(apiActivity, mappedExercises, activity.exerciseIds);
+      console.log('Mapped activity exerciseIds:', newActivity.exerciseIds);
+      
       setActivities([...activities, newActivity]);
+      
+      return newActivity;
     } catch (error) {
       console.error('Failed to add activity:', error);
       throw error;

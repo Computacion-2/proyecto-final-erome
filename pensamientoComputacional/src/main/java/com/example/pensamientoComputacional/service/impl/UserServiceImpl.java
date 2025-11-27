@@ -31,7 +31,10 @@ public class UserServiceImpl implements IUserService {
             throw new BusinessException("User with email " + user.getEmail() + " already exists");
         }
         
+        // Only validate roles if they are provided
+        if (user.getRoles() != null && !user.getRoles().isEmpty()) {
         validateRoles(user.getRoles());
+        }
         return userRepository.save(user);
     }
     
@@ -40,18 +43,35 @@ public class UserServiceImpl implements IUserService {
         User existingUser = userRepository.findById(id)
             .orElseThrow(() -> new BusinessException("User not found with id: " + id));
             
-        if (!existingUser.getEmail().equals(user.getEmail()) &&
+        // Validar email único solo si está cambiando
+        if (user.getEmail() != null && !existingUser.getEmail().equals(user.getEmail()) &&
             userRepository.existsByEmail(user.getEmail())) {
             throw new BusinessException("User with email " + user.getEmail() + " already exists");
         }
         
-        validateRoles(user.getRoles());
-        
+        // Actualizar solo los campos que vienen en el request
+        if (user.getName() != null) {
         existingUser.setName(user.getName());
+        }
+        if (user.getEmail() != null) {
         existingUser.setEmail(user.getEmail());
+        }
+        if (user.getPhotoUrl() != null) {
         existingUser.setPhotoUrl(user.getPhotoUrl());
+        }
+        if (user.getIsActive() != null) {
         existingUser.setIsActive(user.getIsActive());
+        }
+        if (user.getGroup() != null) {
+            existingUser.setGroup(user.getGroup());
+        }
+        
+        // Solo actualizar roles si vienen en el request
+        // Preservar roles existentes si no se envían
+        if (user.getRoles() != null && !user.getRoles().isEmpty()) {
+            validateRoles(user.getRoles());
         existingUser.setRoles(user.getRoles());
+        }
         
         return userRepository.save(existingUser);
     }
@@ -60,6 +80,12 @@ public class UserServiceImpl implements IUserService {
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
             .orElseThrow(() -> new BusinessException("User not found with id: " + id));
+        
+        // First, remove the user from all roles (clear the join table)
+        user.getRoles().clear();
+        userRepository.save(user);
+        
+        // Then delete the user
         userRepository.delete(user);
     }
     

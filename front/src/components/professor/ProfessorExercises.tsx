@@ -25,26 +25,32 @@ export function ProfessorExercises() {
 
   const myExercises = exercises.filter(e => e.createdBy === currentUser?.id);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.title || !formData.description) {
       toast.error('Por favor completa todos los campos');
       return;
     }
 
-    if (editingExercise) {
-      updateExercise(editingExercise, formData);
-      toast.success('Ejercicio actualizado');
-    } else {
-      addExercise({
-        id: Date.now().toString(),
-        ...formData,
-        createdBy: currentUser!.id,
-      });
-      toast.success('Ejercicio creado');
+    try {
+      if (editingExercise) {
+        await updateExercise(editingExercise, formData);
+        toast.success('Ejercicio actualizado');
+        setOpen(false);
+        resetForm();
+      } else {
+        await addExercise({
+          id: Date.now().toString(),
+          ...formData,
+          createdBy: currentUser!.id,
+        });
+        toast.success('Ejercicio creado');
+        setOpen(false);
+        resetForm();
+      }
+    } catch (error) {
+      console.error('Error saving exercise:', error);
+      toast.error('Error al guardar el ejercicio. Por favor intenta de nuevo.');
     }
-
-    setOpen(false);
-    resetForm();
   };
 
   const resetForm = () => {

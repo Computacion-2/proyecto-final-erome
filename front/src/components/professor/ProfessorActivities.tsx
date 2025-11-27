@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import { useData } from '../DataContext';
 import { Button } from '../ui/button';
@@ -23,33 +23,54 @@ export function ProfessorActivities() {
     selectedExercises: [] as string[],
   });
   const [assignPointsActivity, setAssignPointsActivity] = useState<string | null>(null);
+  const [availableGroups, setAvailableGroups] = useState<string[]>([]);
+
+  React.useEffect(() => {
+    const loadGroups = async () => {
+      try {
+        const { groupsApi } = await import('../../lib/api/groups');
+        const groups = await groupsApi.getAllGroups();
+        setAvailableGroups(groups.map(g => g.name));
+      } catch (error) {
+        console.error('Failed to load groups:', error);
+        // Fallback to user groups if API fails
+        setAvailableGroups(currentUser?.groups || []);
+      }
+    };
+    loadGroups();
+  }, [currentUser]);
 
   const currentSemester = getCurrentSemester();
-  const myGroups = currentUser?.groups || [];
+  const myGroups = availableGroups.length > 0 ? availableGroups : (currentUser?.groups || []);
   const myExercises = exercises.filter(e => e.createdBy === currentUser?.id);
   const myActivities = activities.filter(
     a => a.createdBy === currentUser?.id && a.semester === currentSemester
   );
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.title || !formData.group || formData.selectedExercises.length === 0) {
       toast.error('Por favor completa todos los campos');
       return;
     }
 
-    addActivity({
-      id: Date.now().toString(),
-      title: formData.title,
-      group: formData.group,
-      exerciseIds: formData.selectedExercises,
-      createdBy: currentUser!.id,
-      isActive: false,
-      semester: currentSemester,
-    });
+    try {
+      await addActivity({
+        id: Date.now().toString(),
+        title: formData.title,
+        group: formData.group,
+        exerciseIds: formData.selectedExercises,
+        createdBy: currentUser!.id,
+        isActive: false,
+        semester: currentSemester,
+      });
 
-    toast.success('Actividad creada');
-    setOpen(false);
-    setFormData({ title: '', group: '', selectedExercises: [] });
+      toast.success('Actividad creada');
+      setOpen(false);
+      setFormData({ title: '', group: '', selectedExercises: [] });
+    } catch (error) {
+      console.error('Error creating activity:', error);
+      toast.error('Error al crear la actividad. Por favor intenta de nuevo.');
+    }
   };
 
   const handleToggleActivity = (activityId: string, currentStatus: boolean) => {

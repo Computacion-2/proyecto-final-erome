@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import { useData } from '../DataContext';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
@@ -10,6 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { QrCode } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { safeLocalStorage } from '../../lib/storage';
+import { studentsApi } from '../../lib/api/students';
+import type { Student } from '../../lib/api/students';
 
 interface AssignPointsDialogProps {
   activityId: string;
@@ -23,12 +25,38 @@ export function AssignPointsDialog({ activityId, onClose }: AssignPointsDialogPr
   const [selectedExercise, setSelectedExercise] = useState('');
   const [points, setPoints] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
+  const [groupStudents, setGroupStudents] = useState<Student[]>([]);
 
   const activity = activities.find(a => a.id === activityId);
+  
+  useEffect(() => {
+    const loadStudents = async () => {
+      if (!activity?.group) return;
+      try {
+        const students = await studentsApi.getStudentsByGroup(activity.group);
+        setGroupStudents(students);
+      } catch (error) {
+        console.error('Failed to load students:', error);
+        // Fallback to users from context
+        const fallbackStudents = users
+          .filter(u => u.role === 'student' && u.group === activity.group)
+          .map(u => ({
+            id: parseInt(u.id),
+            name: u.name,
+            email: u.email,
+            group: u.group,
+            totalPoints: u.totalPoints,
+            performanceCategory: u.performanceCategory,
+          }));
+        setGroupStudents(fallbackStudents);
+      }
+    };
+    loadStudents();
+  }, [activity?.group, users]);
+
   if (!activity) return null;
 
   const activityExercises = exercises.filter(e => activity.exerciseIds.includes(e.id));
-  const groupStudents = users.filter(u => u.role === 'student' && u.group === activity.group);
 
   const generateCode = () => {
     if (!selectedStudent || !selectedExercise || !points) {
@@ -40,7 +68,7 @@ export function AssignPointsDialog({ activityId, onClose }: AssignPointsDialogPr
     setGeneratedCode(code);
 
     // Immediately assign the points
-    const student = groupStudents.find(s => s.id === selectedStudent);
+    const student = groupStudents.find(s => s.id.toString() === selectedStudent);
     const submission = {
       id: Date.now().toString(),
       studentId: selectedStudent,
@@ -62,15 +90,17 @@ export function AssignPointsDialog({ activityId, onClose }: AssignPointsDialogPr
     if (newTotalPoints >= 500) performanceCategory = 'pro';
     else if (newTotalPoints >= 250) performanceCategory = 'killer';
 
-    // We need to update the student's profile through the auth context
-    // Since we don't have direct access here, we'll store it in localStorage
-    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
-    const updatedUsers = allUsers.map((u: any) => 
-      u.id === selectedStudent 
-        ? { ...u, totalPoints: newTotalPoints, performanceCategory }
-        : u
-    );
-    safeLocalStorage.setItem('users', JSON.stringify(updatedUsers));
+    // Update the student in the context
+    if (student) {
+      const userToUpdate = users.find(u => u.id === selectedStudent);
+      if (userToUpdate) {
+        updateProfile({
+          ...userToUpdate,
+          totalPoints: newTotalPoints,
+          performanceCategory,
+        });
+      }
+    }
 
     toast.success(`Código generado: ${code}. El estudiante puede usarlo para confirmar la entrega.`);
   };
@@ -100,13 +130,19 @@ export function AssignPointsDialog({ activityId, onClose }: AssignPointsDialogPr
                 <SelectValue placeholder="Selecciona un estudiante" />
               </SelectTrigger>
               <SelectContent>
-                {groupStudents.map(student => (
-                  <SelectItem key={student.id} value={student.id}>
-                    <div className="flex items-center gap-2">
-                      {student.name}
-                    </div>
-                  </SelectItem>
-                ))}
+                {groupStudents.length === 0 ? (
+                  <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                    No hay estudiantes en este grupo
+                  </div>
+                ) : (
+                  groupStudents.map(student => (
+                    <SelectItem key={student.id} value={student.id.toString()}>
+                      <div className="flex items-center gap-2">
+                        {student.name}
+                      </div>
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>

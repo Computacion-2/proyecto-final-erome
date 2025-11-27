@@ -29,6 +29,7 @@ function mapApiUserToUser(apiUser: ApiUser): User {
     name: apiUser.name,
     role,
     group: apiUser.group,
+    groups: apiUser.groups, // Include groups for professors
     profilePhoto: apiUser.photoUrl,
     studentRole: apiUser.studentRole as 'pro' | 'killer' | 'principiante' | undefined,
     performanceCategory: apiUser.performanceCategory as 'pro' | 'killer' | 'principiante' | undefined,
@@ -124,7 +125,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (userData: Partial<User>, password: string): Promise<boolean> => {
     try {
       if (userData.email && !userData.email.endsWith('@u.icesi.edu.co') && !userData.email.endsWith('@icesi.edu.co')) {
-        return false;
+        // Dominio inválido: lanzamos un error explícito para que la UI pueda mostrar
+        // un mensaje correcto en vez de tratarlo como "correo ya registrado".
+        throw new Error('Debes usar tu correo institucional (@u.icesi.edu.co o @icesi.edu.co)');
       }
 
       const roleMap: Record<string, string> = {
@@ -147,9 +150,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return true;
     } catch (error: any) {
       console.error('Registration failed:', error);
-      if (error?.status === 400 || error?.message?.includes('already exists') || error?.message?.includes('ya existe')) {
+      // Si el backend devuelve 409, interpretamos que el correo ya existe
+      if (error instanceof ApiError && error.status === 409) {
         return false;
       }
+      // Para otros errores (400 de validación, dominio inválido, etc.) propagamos el mensaje
       throw error;
     }
   };
@@ -183,11 +188,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const apiUser = await usersApi.updateUser(parseInt(userId), {
         name: updates.name,
         email: updates.email,
+        role: updates.role, // Include role so backend knows if it's a professor
         group: updates.group,
         photoUrl: updates.profilePhoto,
         studentRole: updates.studentRole,
         performanceCategory: updates.performanceCategory,
         totalPoints: updates.totalPoints,
+        groups: updates.groups, // Include groups for professors
       });
 
       const updatedUser = mapApiUserToUser(apiUser);
@@ -221,12 +228,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const apiUser = await usersApi.createUser({
         name: user.name,
         email: user.email,
-        role: user.role,
+        role: user.role?.toUpperCase(), // Backend expects uppercase role names
         group: user.group,
         photoUrl: user.profilePhoto,
         studentRole: user.studentRole,
         performanceCategory: user.performanceCategory,
         totalPoints: user.totalPoints,
+        groups: user.groups, // Include groups for professors
+        password: password, // Include password for new users
       });
 
       const newUser = mapApiUserToUser(apiUser);

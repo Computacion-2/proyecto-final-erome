@@ -17,7 +17,7 @@ public class Exercise {
     private Long id;
     
     @ManyToOne
-    @JoinColumn(name = "activity_id", nullable = false)
+    @JoinColumn(name = "activity_id", nullable = true)
     private Activity activity;
     
     @Column(nullable = false)

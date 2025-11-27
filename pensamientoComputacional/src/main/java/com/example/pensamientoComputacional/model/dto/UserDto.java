@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -29,4 +30,15 @@ public class UserDto {
     // For creation/update requests
     private String password;
     private Set<Long> roleIds;
+    
+    // Student-specific fields (for profile updates)
+    private String studentRole;
+    private String performanceCategory;
+    private Integer totalPoints;
+    
+    // Role name for display purposes
+    private String role;
+    
+    // Professor-specific fields
+    private List<String> groups; // List of group names for professors
 }

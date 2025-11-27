@@ -1,6 +1,10 @@
 import { apiClient } from '../api';
 import { User } from './auth';
 
+export interface CreateUserRequest extends Partial<User> {
+  password?: string;
+}
+
 export const usersApi = {
   async getAllUsers(): Promise<User[]> {
     return await apiClient.get<User[]>('/users');
@@ -10,7 +14,7 @@ export const usersApi = {
     return await apiClient.get<User>(`/users/${id}`);
   },
 
-  async createUser(user: Partial<User>): Promise<User> {
+  async createUser(user: CreateUserRequest): Promise<User> {
     return await apiClient.post<User>('/users', user);
   },
 

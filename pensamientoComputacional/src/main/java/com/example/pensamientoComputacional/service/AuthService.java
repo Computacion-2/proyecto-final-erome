@@ -1,8 +1,10 @@
 package com.example.pensamientoComputacional.service;
 
 import com.example.pensamientoComputacional.model.entities.Role;
+import com.example.pensamientoComputacional.model.entities.Student;
 import com.example.pensamientoComputacional.model.entities.User;
 import com.example.pensamientoComputacional.repository.RoleRepository;
+import com.example.pensamientoComputacional.repository.StudentRepository;
 import com.example.pensamientoComputacional.repository.UserRepository;
 import com.example.pensamientoComputacional.service.exception.BusinessException;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -20,20 +22,27 @@ import java.util.Set;
 public class AuthService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final StudentRepository studentRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
 
     public AuthService(UserRepository userRepository,
                        RoleRepository roleRepository,
+                       StudentRepository studentRepository,
                        PasswordEncoder passwordEncoder,
                        AuthenticationManager authenticationManager) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
+        this.studentRepository = studentRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
     }
 
-    public User registerUser(String name, String email, String rawPassword, String defaultRoleName) {
+    /**
+     * Registra un nuevo usuario en el sistema.
+     * Si el rol es STUDENT, también crea la entidad Student asociada.
+     */
+    public User registerUser(String name, String email, String rawPassword, String defaultRoleName, String group, String studentRole) {
         if (userRepository.existsByEmail(email)) {
             throw new BusinessException("User with email " + email + " already exists");
         }
@@ -43,6 +52,11 @@ public class AuthService {
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
         user.setIsActive(true);
+        
+        // Set group if provided
+        if (group != null && !group.isEmpty()) {
+            user.setGroup(group);
+        }
 
         if (defaultRoleName != null) {
             Role role = roleRepository.findByName(defaultRoleName)
@@ -52,7 +66,29 @@ public class AuthService {
             user.setRoles(roles);
         }
 
-        return userRepository.save(user);
+        // Save user first
+        user = userRepository.save(user);
+
+        // Create Student entity if role is STUDENT
+        if ("STUDENT".equals(defaultRoleName)) {
+            if (!studentRepository.existsById(user.getId())) {
+                Student student = new Student();
+                student.setUser(user);
+                if (studentRole != null) {
+                    student.setInitialProfile(studentRole);
+                }
+                studentRepository.save(student);
+            }
+        }
+
+        return user;
+    }
+    
+    /**
+     * Versión simplificada para compatibilidad con código existente.
+     */
+    public User registerUser(String name, String email, String rawPassword, String defaultRoleName) {
+        return registerUser(name, email, rawPassword, defaultRoleName, null, null);
     }
 
     public Authentication authenticate(String email, String rawPassword) {
