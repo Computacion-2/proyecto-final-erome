@@ -47,6 +47,8 @@ interface AuthContextType {
   updateUser: (userId: string, updates: Partial<User>) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
   addUser: (user: User, password: string) => Promise<void>;
+  refreshUsers: () => Promise<void>;
+  refreshCurrentUser: () => Promise<void>;
   loading: boolean;
 }
 
@@ -87,7 +89,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'professor')) {
+    // Load users for all roles to enable leaderboard/podium functionality
+    if (currentUser) {
       loadUsers();
     }
   }, [currentUser]);
@@ -246,6 +249,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refreshUsers = async (): Promise<void> => {
+    try {
+      const apiUsers = await usersApi.getAllUsers();
+      setUsers(apiUsers.map(mapApiUserToUser));
+    } catch (error) {
+      console.error('Failed to refresh users:', error);
+    }
+  };
+
+  const refreshCurrentUser = async (): Promise<void> => {
+    try {
+      const apiUser = await authApi.getCurrentUser();
+      const updatedUser = mapApiUserToUser(apiUser);
+      setCurrentUser(updatedUser);
+      // Also update in users array if present
+      setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
+    } catch (error) {
+      console.error('Failed to refresh current user:', error);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       currentUser,
@@ -257,6 +281,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateUser,
       deleteUser,
       addUser,
+      refreshUsers,
+      refreshCurrentUser,
       loading,
     }}>
       {children}

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { useData } from '../DataContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -7,11 +7,37 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 
 export function StudentOverview() {
   const { currentUser } = useAuth();
-  const { submissions } = useData();
+  const { submissions, exercises, refreshData } = useData();
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Listen for resolution updates
+  useEffect(() => {
+    const handleUpdate = () => {
+      refreshData().then(() => {
+        setRefreshKey(prev => prev + 1);
+      });
+    };
+    
+    window.addEventListener('resolutions-updated', handleUpdate);
+    return () => window.removeEventListener('resolutions-updated', handleUpdate);
+  }, [refreshData]);
 
-  const mySubmissions = submissions.filter(s => s.studentId === currentUser?.id);
-  const totalPoints = mySubmissions.reduce((sum, s) => sum + s.points, 0);
-  const exercisesCompleted = new Set(mySubmissions.map(s => s.exerciseId)).size;
+  // Only show completed submissions in insights
+  const mySubmissions = useMemo(() => {
+    return submissions.filter(s => 
+      s.studentId === currentUser?.id && s.status === 'COMPLETED'
+    );
+  }, [submissions, currentUser?.id, refreshKey]);
+  
+  const totalPoints = useMemo(() => 
+    mySubmissions.reduce((sum, s) => sum + s.points, 0),
+    [mySubmissions]
+  );
+  
+  const exercisesCompleted = useMemo(() => 
+    new Set(mySubmissions.map(s => s.exerciseId)).size,
+    [mySubmissions]
+  );
 
   // Weekly progress data
   const weeklyData = useMemo(() => {
@@ -35,11 +61,29 @@ export function StudentOverview() {
   // Daily activity (last 7 days)
   const dailyData = useMemo(() => {
     const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-    return days.map((day, index) => ({
-      day,
-      ejercicios: Math.floor(Math.random() * 5), // Mock data
-    }));
-  }, []);
+    const today = new Date();
+    return days.map((day, index) => {
+      // Calculate date for this day (last 7 days)
+      const date = new Date(today);
+      date.setDate(date.getDate() - (6 - index));
+      date.setHours(0, 0, 0, 0);
+      const nextDay = new Date(date);
+      nextDay.setDate(nextDay.getDate() + 1);
+      
+      // Count exercises completed on this day
+      const exercisesOnDay = mySubmissions.filter(s => {
+        const submissionDate = new Date(s.submittedAt);
+        submissionDate.setHours(0, 0, 0, 0);
+        return submissionDate.getTime() >= date.getTime() && 
+               submissionDate.getTime() < nextDay.getTime();
+      }).length;
+      
+      return {
+        day,
+        ejercicios: exercisesOnDay,
+      };
+    });
+  }, [mySubmissions]);
 
   return (
     <div className="space-y-6">
@@ -157,23 +201,29 @@ export function StudentOverview() {
               {mySubmissions
                 .sort((a, b) => b.submittedAt.getTime() - a.submittedAt.getTime())
                 .slice(0, 5)
-                .map((submission) => (
-                  <div
-                    key={submission.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                  >
-                    <div>
-                      <p className="text-sm">Ejercicio #{submission.exerciseId.slice(0, 8)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {submission.submittedAt.toLocaleDateString()} a las{' '}
-                        {submission.submittedAt.toLocaleTimeString()}
-                      </p>
+                .map((submission) => {
+                  // Find exercise name if available
+                  const exercise = exercises.find(e => e.id === submission.exerciseId);
+                  return (
+                    <div
+                      key={submission.id}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div>
+                        <p className="text-sm font-medium">
+                          {exercise?.title || `Ejercicio #${submission.exerciseId.slice(0, 8)}`}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {submission.submittedAt.toLocaleDateString()} a las{' '}
+                          {submission.submittedAt.toLocaleTimeString()}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-semibold text-blue-600">{submission.points} pts</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-lg text-blue-600">{submission.points} pts</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
             </div>
           )}
         </CardContent>

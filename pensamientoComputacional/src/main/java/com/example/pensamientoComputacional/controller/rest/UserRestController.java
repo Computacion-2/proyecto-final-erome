@@ -4,6 +4,7 @@ import com.example.pensamientoComputacional.mapper.UserMapper;
 import com.example.pensamientoComputacional.model.dto.UserDto;
 import com.example.pensamientoComputacional.model.entities.*;
 import com.example.pensamientoComputacional.repository.*;
+import com.example.pensamientoComputacional.repository.StudentPerformanceRepository;
 import com.example.pensamientoComputacional.security.RequirePermission;
 import com.example.pensamientoComputacional.security.RequireRole;
 import com.example.pensamientoComputacional.service.IUserService;
@@ -57,6 +58,15 @@ public class UserRestController {
     
     @Autowired
     private SemesterRepository semesterRepository;
+    
+    @Autowired
+    private StudentRepository studentRepository;
+    
+    @Autowired
+    private StudentEnrollmentRepository studentEnrollmentRepository;
+    
+    @Autowired
+    private StudentPerformanceRepository studentPerformanceRepository;
 
     @GetMapping
     @PreAuthorize("hasAuthority('READ_USER') or hasRole('ADMIN')")
@@ -72,17 +82,21 @@ public class UserRestController {
         List<UserDto> userDtos = users.stream()
                 .map(user -> {
                     UserDto dto = userMapper.entityToDto(user);
-                    // Add professor groups if user is a professor
-                    // Check roles to determine if user is a professor
+                    // Check roles to determine if user is a professor or student
                     boolean isProfessor = false;
-                    if (dto.getRole() != null && dto.getRole().equalsIgnoreCase("PROFESSOR")) {
-                        isProfessor = true;
+                    boolean isStudent = false;
+                    if (dto.getRole() != null) {
+                        String roleUpper = dto.getRole().toUpperCase();
+                        isProfessor = roleUpper.equals("PROFESSOR");
+                        isStudent = roleUpper.equals("STUDENT");
                     } else {
                         // Check user roles directly
                         Set<Role> roles = user.getRoles();
                         if (roles != null) {
                             isProfessor = roles.stream()
                                     .anyMatch(role -> "PROFESSOR".equalsIgnoreCase(role.getName()));
+                            isStudent = roles.stream()
+                                    .anyMatch(role -> "STUDENT".equalsIgnoreCase(role.getName()));
                         }
                     }
                     
@@ -102,6 +116,39 @@ public class UserRestController {
                             System.out.println("Setting groups for professor " + user.getId() + ": " + groupNames);
                         } else {
                             System.out.println("Professor entity not found for user " + user.getId());
+                        }
+                    } else if (isStudent) {
+                        // Get student's group from StudentEnrollment (preferred) or User.group (fallback)
+                        Student student = studentRepository.findById(user.getId()).orElse(null);
+                        if (student != null) {
+                            List<StudentEnrollment> enrollments = studentEnrollmentRepository.findByStudentAndIsActiveTrue(student);
+                            if (!enrollments.isEmpty()) {
+                                // Use the first active enrollment's group
+                                String groupName = enrollments.get(0).getGroup().getName();
+                                dto.setGroup(groupName);
+                                System.out.println("Setting group for student " + user.getId() + " from enrollment: " + groupName);
+                            } else {
+                                // Fallback to User.group if no enrollment found
+                                String userGroup = user.getGroup();
+                                if (userGroup != null && !userGroup.isEmpty()) {
+                                    dto.setGroup(userGroup);
+                                    System.out.println("Setting group for student " + user.getId() + " from user.group: " + userGroup);
+                                }
+                            }
+                            
+                            // Get totalPoints from StudentPerformance
+                            StudentPerformance performance = studentPerformanceRepository.findByStudent(student);
+                            if (performance != null) {
+                                dto.setTotalPoints(performance.getTotalPoints());
+                                dto.setPerformanceCategory(performance.getCategory());
+                            }
+                        } else {
+                            // If student entity doesn't exist, use User.group
+                            String userGroup = user.getGroup();
+                            if (userGroup != null && !userGroup.isEmpty()) {
+                                dto.setGroup(userGroup);
+                                System.out.println("Setting group for student " + user.getId() + " from user.group (no student entity): " + userGroup);
+                            }
                         }
                     }
                     return dto;
@@ -136,6 +183,36 @@ public class UserRestController {
                         .map(assignment -> assignment.getGroup().getName())
                         .collect(Collectors.toList());
                 dto.setGroups(groupNames);
+            }
+        } else if (dto.getRole() != null && dto.getRole().equalsIgnoreCase("STUDENT")) {
+            // Get student's group from StudentEnrollment (preferred) or User.group (fallback)
+            Student student = studentRepository.findById(id).orElse(null);
+            if (student != null) {
+                List<StudentEnrollment> enrollments = studentEnrollmentRepository.findByStudentAndIsActiveTrue(student);
+                if (!enrollments.isEmpty()) {
+                    // Use the first active enrollment's group
+                    String groupName = enrollments.get(0).getGroup().getName();
+                    dto.setGroup(groupName);
+                } else {
+                    // Fallback to User.group if no enrollment found
+                    String userGroup = user.getGroup();
+                    if (userGroup != null && !userGroup.isEmpty()) {
+                        dto.setGroup(userGroup);
+                    }
+                }
+                
+                // Get totalPoints from StudentPerformance
+                StudentPerformance performance = studentPerformanceRepository.findByStudent(student);
+                if (performance != null) {
+                    dto.setTotalPoints(performance.getTotalPoints());
+                    dto.setPerformanceCategory(performance.getCategory());
+                }
+            } else {
+                // If student entity doesn't exist, use User.group
+                String userGroup = user.getGroup();
+                if (userGroup != null && !userGroup.isEmpty()) {
+                    dto.setGroup(userGroup);
+                }
             }
         }
         return ResponseEntity.ok(dto);
@@ -184,12 +261,89 @@ public class UserRestController {
             
         User savedUser = userService.createUser(user);
         
+        // Create Student entity if user is a student
+        if ("STUDENT".equalsIgnoreCase(userDto.getRole())) {
+            if (!studentRepository.existsById(savedUser.getId())) {
+                Student newStudent = new Student();
+                newStudent.setUser(savedUser);
+                studentRepository.save(newStudent);
+            }
+        }
+        
         // Create Professor entity if user is a professor
         if ("PROFESSOR".equalsIgnoreCase(userDto.getRole())) {
             if (!professorRepository.existsById(savedUser.getId())) {
                 Professor newProfessor = new Professor();
                 newProfessor.setUser(savedUser);
                 professorRepository.save(newProfessor);
+            }
+        }
+        
+        // Handle student group enrollment if user is a student
+        if ("STUDENT".equalsIgnoreCase(userDto.getRole()) && userDto.getGroup() != null && !userDto.getGroup().isEmpty()) {
+            System.out.println("Processing student group enrollment for user " + savedUser.getId() + ": " + userDto.getGroup());
+            
+            Student student = studentRepository.findById(savedUser.getId())
+                    .orElseThrow(() -> new RuntimeException("Student entity not found"));
+            
+            // Get active semester
+            List<Semester> activeSemesters = semesterRepository.findByIsActiveTrue();
+            Semester activeSemester = activeSemesters.isEmpty() ? null : activeSemesters.get(0);
+            
+            if (activeSemester == null) {
+                System.out.println("WARNING: No active semester found. Cannot enroll student in group.");
+            } else {
+                // Find or create group
+                Group group = groupRepository.findByName(userDto.getGroup())
+                        .orElseGet(() -> {
+                            List<Group> allGroups = groupRepository.findAll();
+                            Group found = allGroups.stream()
+                                    .filter(g -> g.getName().equalsIgnoreCase(userDto.getGroup()))
+                                    .findFirst()
+                                    .orElse(null);
+                            
+                            if (found == null) {
+                                System.out.println("Group '" + userDto.getGroup() + "' not found. Creating it...");
+                                Group newGroup = new Group();
+                                newGroup.setName(userDto.getGroup());
+                                newGroup.setSemester(activeSemester);
+                                found = groupRepository.save(newGroup);
+                                System.out.println("Created new group: " + found.getName() + " (ID: " + found.getId() + ")");
+                            }
+                            
+                            return found;
+                        });
+                
+                if (group != null) {
+                    // Update User's group field for backward compatibility
+                    savedUser.setGroup(group.getName());
+                    userService.updateUser(savedUser.getId(), savedUser);
+                    
+                    // Check if enrollment already exists
+                    java.util.Optional<StudentEnrollment> existingEnrollment = 
+                            studentEnrollmentRepository.findByStudentAndGroupAndIsActiveTrue(student, group);
+                    
+                    if (existingEnrollment.isEmpty()) {
+                        // Deactivate any existing enrollments for this student
+                        List<StudentEnrollment> existingEnrollments = 
+                                studentEnrollmentRepository.findByStudentAndIsActiveTrue(student);
+                        for (StudentEnrollment enrollment : existingEnrollments) {
+                            enrollment.setIsActive(false);
+                            studentEnrollmentRepository.save(enrollment);
+                        }
+                        
+                        // Create new enrollment
+                        StudentEnrollment enrollment = new StudentEnrollment();
+                        enrollment.setStudent(student);
+                        enrollment.setGroup(group);
+                        enrollment.setSemester(activeSemester);
+                        enrollment.setIsActive(true);
+                        studentEnrollmentRepository.save(enrollment);
+                        System.out.println("Created enrollment for student " + student.getId() + " and group " + group.getName());
+                    } else {
+                        System.out.println("Enrollment already exists for student " + student.getId() + " and group " + group.getName());
+                    }
+                }
             }
         }
         
@@ -295,16 +449,30 @@ public class UserRestController {
         User user = userMapper.dtoToEntity(userDto);
         User updatedUser = userService.updateUser(id, user);
         
-        // Determine if user is a professor (check existing roles or DTO role)
+        // Determine if user is a professor or student (check existing roles or DTO role)
         boolean isProfessor = false;
-        if (userDto.getRole() != null && "PROFESSOR".equalsIgnoreCase(userDto.getRole())) {
-            isProfessor = true;
+        boolean isStudent = false;
+        if (userDto.getRole() != null) {
+            String roleUpper = userDto.getRole().toUpperCase();
+            isProfessor = roleUpper.equals("PROFESSOR");
+            isStudent = roleUpper.equals("STUDENT");
         } else {
             // Check existing user roles
             Set<Role> roles = existingUser.getRoles();
             if (roles != null) {
                 isProfessor = roles.stream()
                         .anyMatch(role -> "PROFESSOR".equalsIgnoreCase(role.getName()));
+                isStudent = roles.stream()
+                        .anyMatch(role -> "STUDENT".equalsIgnoreCase(role.getName()));
+            }
+        }
+        
+        // Create Student entity if user is a student and doesn't have one
+        if (isStudent) {
+            if (!studentRepository.existsById(id)) {
+                Student newStudent = new Student();
+                newStudent.setUser(updatedUser);
+                studentRepository.save(newStudent);
             }
         }
         
@@ -314,6 +482,74 @@ public class UserRestController {
                 Professor newProfessor = new Professor();
                 newProfessor.setUser(updatedUser);
                 professorRepository.save(newProfessor);
+            }
+        }
+        
+        // Handle student group enrollment if user is a student
+        if (isStudent && userDto.getGroup() != null && !userDto.getGroup().isEmpty()) {
+            System.out.println("Processing student group enrollment update for user " + id + ": " + userDto.getGroup());
+            
+            Student student = studentRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Student entity not found"));
+            
+            // Get active semester
+            List<Semester> activeSemesters = semesterRepository.findByIsActiveTrue();
+            Semester activeSemester = activeSemesters.isEmpty() ? null : activeSemesters.get(0);
+            
+            if (activeSemester == null) {
+                System.out.println("WARNING: No active semester found. Cannot enroll student in group.");
+            } else {
+                // Find or create group
+                Group group = groupRepository.findByName(userDto.getGroup())
+                        .orElseGet(() -> {
+                            List<Group> allGroups = groupRepository.findAll();
+                            Group found = allGroups.stream()
+                                    .filter(g -> g.getName().equalsIgnoreCase(userDto.getGroup()))
+                                    .findFirst()
+                                    .orElse(null);
+                            
+                            if (found == null) {
+                                System.out.println("Group '" + userDto.getGroup() + "' not found. Creating it...");
+                                Group newGroup = new Group();
+                                newGroup.setName(userDto.getGroup());
+                                newGroup.setSemester(activeSemester);
+                                found = groupRepository.save(newGroup);
+                                System.out.println("Created new group: " + found.getName() + " (ID: " + found.getId() + ")");
+                            }
+                            
+                            return found;
+                        });
+                
+                if (group != null) {
+                    // Update User's group field for backward compatibility
+                    updatedUser.setGroup(group.getName());
+                    userService.updateUser(updatedUser.getId(), updatedUser);
+                    
+                    // Check if enrollment already exists
+                    java.util.Optional<StudentEnrollment> existingEnrollment = 
+                            studentEnrollmentRepository.findByStudentAndGroupAndIsActiveTrue(student, group);
+                    
+                    if (existingEnrollment.isEmpty()) {
+                        // Deactivate any existing enrollments for this student
+                        List<StudentEnrollment> existingEnrollments = 
+                                studentEnrollmentRepository.findByStudentAndIsActiveTrue(student);
+                        for (StudentEnrollment enrollment : existingEnrollments) {
+                            enrollment.setIsActive(false);
+                            studentEnrollmentRepository.save(enrollment);
+                        }
+                        
+                        // Create new enrollment
+                        StudentEnrollment enrollment = new StudentEnrollment();
+                        enrollment.setStudent(student);
+                        enrollment.setGroup(group);
+                        enrollment.setSemester(activeSemester);
+                        enrollment.setIsActive(true);
+                        studentEnrollmentRepository.save(enrollment);
+                        System.out.println("Created enrollment for student " + student.getId() + " and group " + group.getName());
+                    } else {
+                        System.out.println("Enrollment already exists for student " + student.getId() + " and group " + group.getName());
+                    }
+                }
             }
         }
         
@@ -387,15 +623,20 @@ public class UserRestController {
         }
         
         UserDto responseDto = userMapper.entityToDto(updatedUser);
-        // Add professor groups to response - check if user is professor
+        // Add professor groups or student group to response
         boolean isProfessorResponse = false;
-        if (userDto.getRole() != null && "PROFESSOR".equalsIgnoreCase(userDto.getRole())) {
-            isProfessorResponse = true;
+        boolean isStudentResponse = false;
+        if (userDto.getRole() != null) {
+            String roleUpper = userDto.getRole().toUpperCase();
+            isProfessorResponse = roleUpper.equals("PROFESSOR");
+            isStudentResponse = roleUpper.equals("STUDENT");
         } else {
             Set<Role> roles = updatedUser.getRoles();
             if (roles != null) {
                 isProfessorResponse = roles.stream()
                         .anyMatch(role -> "PROFESSOR".equalsIgnoreCase(role.getName()));
+                isStudentResponse = roles.stream()
+                        .anyMatch(role -> "STUDENT".equalsIgnoreCase(role.getName()));
             }
         }
         
@@ -410,6 +651,25 @@ public class UserRestController {
                 System.out.println("Response groups for professor " + id + ": " + groupNames);
             } else {
                 System.out.println("Professor entity not found for user " + id);
+            }
+        } else if (isStudentResponse) {
+            // Get student's group from StudentEnrollment (preferred) or User.group (fallback)
+            Student student = studentRepository.findById(id).orElse(null);
+            if (student != null) {
+                List<StudentEnrollment> enrollments = studentEnrollmentRepository.findByStudentAndIsActiveTrue(student);
+                if (!enrollments.isEmpty()) {
+                    // Use the first active enrollment's group
+                    String groupName = enrollments.get(0).getGroup().getName();
+                    responseDto.setGroup(groupName);
+                    System.out.println("Response group for student " + id + " from enrollment: " + groupName);
+                } else if (responseDto.getGroup() == null || responseDto.getGroup().isEmpty()) {
+                    // Fallback to User.group if no enrollment found
+                    String userGroup = updatedUser.getGroup();
+                    if (userGroup != null && !userGroup.isEmpty()) {
+                        responseDto.setGroup(userGroup);
+                        System.out.println("Response group for student " + id + " from user.group: " + userGroup);
+                    }
+                }
             }
         }
         

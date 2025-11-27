@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -6,12 +6,28 @@ import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
-import { Upload, User, Mail, Users, Award } from 'lucide-react';
+import { Upload, User, Mail, Users, Award, Trophy } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { imagesApi } from '../../lib/api/images';
 
 export function StudentProfile() {
-  const { currentUser, updateProfile } = useAuth();
+  const { currentUser, updateProfile, refreshCurrentUser } = useAuth();
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Listen for resolution updates to refresh user data
+  useEffect(() => {
+    const handleUpdate = () => {
+      refreshCurrentUser().then(() => {
+        setRefreshKey(prev => prev + 1);
+      });
+    };
+    
+    window.addEventListener('resolutions-updated', handleUpdate);
+    // Also refresh on mount to ensure we have latest data
+    refreshCurrentUser();
+    
+    return () => window.removeEventListener('resolutions-updated', handleUpdate);
+  }, [refreshCurrentUser]);
   const [isEditing, setIsEditing] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [formData, setFormData] = useState({
@@ -126,7 +142,21 @@ export function StudentProfile() {
                 <Users className="size-4 inline mr-2" />
                 Grupo
               </Label>
-              <p className="px-3 py-2 bg-gray-50 rounded-md">{currentUser?.group}</p>
+              <p className="px-3 py-2 bg-gray-50 rounded-md">{currentUser?.group || 'No asignado'}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>
+                <Trophy className="size-4 inline mr-2 text-yellow-600" />
+                Puntos Totales
+              </Label>
+              <div className="px-4 py-3 bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-md border-2 border-yellow-300">
+                <div className="flex items-center gap-2">
+                  <Trophy className="size-5 text-yellow-600" />
+                  <p className="text-3xl font-bold text-yellow-700">{currentUser?.totalPoints || 0}</p>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Puntos acumulados</p>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -135,7 +165,7 @@ export function StudentProfile() {
                 Nivel inicial seleccionado
               </Label>
               <p className="px-3 py-2 bg-gray-50 rounded-md capitalize">
-                {currentUser?.studentRole}
+                {currentUser?.studentRole || 'No seleccionado'}
               </p>
             </div>
           </div>
@@ -179,8 +209,11 @@ export function StudentProfile() {
               </p>
             </div>
             <div className="text-right">
-              <p className="text-3xl">{currentUser?.totalPoints || 0}</p>
-              <p className="text-sm text-muted-foreground">Puntos totales</p>
+              <div className="flex items-center gap-2 justify-end">
+                <Trophy className="size-6 text-yellow-600" />
+                <p className="text-3xl font-bold">{currentUser?.totalPoints || 0}</p>
+              </div>
+              <p className="text-sm text-muted-foreground">puntos totales</p>
             </div>
           </div>
           

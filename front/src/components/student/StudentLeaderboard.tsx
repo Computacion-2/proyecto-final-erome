@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -6,13 +6,33 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Trophy, Medal, Award } from 'lucide-react';
 
 export function StudentLeaderboard() {
-  const { currentUser, users } = useAuth();
+  const { currentUser, users, refreshUsers } = useAuth();
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Listen for user updates
+  useEffect(() => {
+    const handleUpdate = () => {
+      refreshUsers().then(() => {
+        setRefreshKey(prev => prev + 1);
+      });
+    };
+    
+    window.addEventListener('resolutions-updated', handleUpdate);
+    return () => window.removeEventListener('resolutions-updated', handleUpdate);
+  }, [refreshUsers]);
 
   const groupStudents = useMemo(() => {
+    if (!currentUser?.group) return [];
+    
     return users
-      .filter(u => u.role === 'student' && u.group === currentUser?.group)
+      .filter(u => {
+        // Normalize group comparison
+        const userGroup = u.group?.toString().trim() || '';
+        const currentGroup = currentUser.group?.toString().trim() || '';
+        return u.role === 'student' && userGroup === currentGroup;
+      })
       .sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
-  }, [users, currentUser]);
+  }, [users, currentUser, refreshKey]);
 
   const topFive = groupStudents.slice(0, 5);
   const myPosition = groupStudents.findIndex(s => s.id === currentUser?.id) + 1;
@@ -47,9 +67,15 @@ export function StudentLeaderboard() {
           <CardDescription>Top 5 estudiantes con mejor desempeño</CardDescription>
         </CardHeader>
         <CardContent>
-          {topFive.length === 0 ? (
+          {groupStudents.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
-              No hay datos disponibles aún
+              {!currentUser?.group 
+                ? "No tienes un grupo asignado. Contacta a tu profesor."
+                : "No hay estudiantes en tu grupo aún"}
+            </p>
+          ) : topFive.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">
+              No hay estudiantes con puntos aún
             </p>
           ) : (
             <div className="space-y-4">
@@ -136,30 +162,49 @@ export function StudentLeaderboard() {
       </Card>
 
       {/* My Position */}
-      {myPosition > 5 && (
+      {myPosition > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Tu Posición</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex items-center justify-center size-10 rounded-full bg-white">
-                <span className="font-medium">{myPosition}</span>
+            {myPosition <= 5 ? (
+              <div className="flex items-center gap-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                <div className="flex items-center justify-center size-10 rounded-full bg-white">
+                  <Trophy className="size-5 text-yellow-600" />
+                </div>
+                <Avatar className="size-12">
+                  <AvatarImage src={currentUser?.profilePhoto} />
+                  <AvatarFallback>{currentUser?.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <p className="font-medium">{currentUser?.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    ¡Estás en el Top 5! Posición #{myPosition}
+                  </p>
+                </div>
+                <Badge className="bg-yellow-600">{currentUser?.totalPoints || 0} pts</Badge>
               </div>
-              <Avatar className="size-12">
-                <AvatarImage src={currentUser?.profilePhoto} />
-                <AvatarFallback>{currentUser?.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <p className="font-medium">{currentUser?.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {topFive.length > 0 && (
-                    <>A {(topFive[4]?.totalPoints || 0) - (currentUser?.totalPoints || 0)} puntos del top 5</>
-                  )}
-                </p>
+            ) : (
+              <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center justify-center size-10 rounded-full bg-white">
+                  <span className="font-medium">{myPosition}</span>
+                </div>
+                <Avatar className="size-12">
+                  <AvatarImage src={currentUser?.profilePhoto} />
+                  <AvatarFallback>{currentUser?.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <p className="font-medium">{currentUser?.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {topFive.length > 0 && topFive[4] && (
+                      <>A {Math.abs((topFive[4]?.totalPoints || 0) - (currentUser?.totalPoints || 0))} puntos del top 5</>
+                    )}
+                  </p>
+                </div>
+                <Badge variant="secondary">{currentUser?.totalPoints || 0} pts</Badge>
               </div>
-              <Badge variant="secondary">{currentUser?.totalPoints || 0} pts</Badge>
-            </div>
+            )}
           </CardContent>
         </Card>
       )}

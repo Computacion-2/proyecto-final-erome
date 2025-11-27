@@ -14,8 +14,8 @@ import { LiveScoreboard } from './LiveScoreboard';
 import { safeLocalStorage } from '../../lib/storage';
 
 export function StudentActivities() {
-  const { currentUser, users, updateProfile } = useAuth();
-  const { activities, exercises, submissions, addSubmission, getActiveActivity } = useData();
+  const { currentUser, users, updateProfile, refreshCurrentUser, refreshUsers } = useAuth();
+  const { activities, exercises, submissions, addSubmission, getActiveActivity, refreshData } = useData();
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
   const [submissionCode, setSubmissionCode] = useState('');
   const [selectedExerciseId, setSelectedExerciseId] = useState('');
@@ -23,6 +23,94 @@ export function StudentActivities() {
   const activeActivity = getActiveActivity(currentUser?.group || '');
   const myActivities = activities.filter(a => a.group === currentUser?.group);
   const mySubmissions = submissions.filter(s => s.studentId === currentUser?.id);
+  
+  // Find pending resolutions with codes assigned by professor
+  const pendingResolutionsWithCode = mySubmissions.filter(s => 
+    s.code && s.code.length > 0 && s.points > 0 && 
+    !mySubmissions.some(sub => 
+      sub.exerciseId === s.exerciseId && 
+      sub.activityId === s.activityId && 
+      sub.id !== s.id &&
+      sub.points === s.points
+    )
+  );
+
+  const handleValidateCode = async () => {
+    if (!selectedExerciseId || !submissionCode) {
+      toast.error('Por favor completa todos los campos');
+      return;
+    }
+
+    try {
+      // Find the pending resolution for this exercise
+      const pendingResolution = mySubmissions.find(s => {
+        // Normalize activityId comparison
+        const submissionActivityId = s.activityId?.toString().trim() || '';
+        const expectedActivityId = selectedActivity?.toString().trim() || '';
+        const activityMatches = submissionActivityId === expectedActivityId || 
+                                (submissionActivityId === '' && expectedActivityId !== '');
+        
+        return s.exerciseId === selectedExerciseId && 
+               activityMatches &&
+               s.status === 'PENDING' &&
+               s.code &&
+               s.code.length > 0 &&
+               s.points > 0;
+      });
+
+      if (!pendingResolution) {
+        toast.error('No se encontró una resolución pendiente para este ejercicio');
+        return;
+      }
+
+      // Validate the code with backend
+      const { resolutionsApi } = await import('../../lib/api/resolutions');
+      const validatedResolution = await resolutionsApi.validateCode(
+        parseInt(pendingResolution.id),
+        submissionCode.trim().toUpperCase()
+      );
+
+      console.log('Validated resolution from backend:', validatedResolution);
+
+      // Update student's total points
+      const points = validatedResolution.pointsAwarded || pendingResolution.points || 0;
+      const totalPoints = (currentUser?.totalPoints || 0) + points;
+      updateProfile({ totalPoints });
+
+      // Automatically categorize student based on performance
+      let performanceCategory: 'pro' | 'killer' | 'principiante' = 'principiante';
+      if (totalPoints >= 500) performanceCategory = 'pro';
+      else if (totalPoints >= 250) performanceCategory = 'killer';
+      
+      updateProfile({ performanceCategory });
+
+      toast.success(`¡Código validado! +${points} puntos`);
+      
+      // Close dialog first
+      setSubmissionCode('');
+      setSelectedExerciseId('');
+      setSelectedActivity(null);
+
+      // Refresh current user to get updated totalPoints from backend
+      await refreshCurrentUser();
+      
+      // Refresh all users for podium/leaderboard
+      await refreshUsers();
+      
+      // Refresh data to show updated resolution and update insights
+      await refreshData();
+      
+      // Also trigger a window event to force React to re-render
+      window.dispatchEvent(new Event('resolutions-updated'));
+    } catch (error: any) {
+      console.error('Failed to validate code:', error);
+      if (error?.status === 400) {
+        toast.error('Código inválido. Por favor verifica el código e intenta de nuevo.');
+      } else {
+        toast.error('Error al validar el código. Por favor intenta de nuevo.');
+      }
+    }
+  };
 
   const handleSubmitCode = () => {
     if (!selectedExerciseId || !submissionCode) {
@@ -80,7 +168,38 @@ export function StudentActivities() {
   };
 
   const isExerciseCompleted = (activityId: string, exerciseId: string) => {
-    return mySubmissions.some(s => s.activityId === activityId && s.exerciseId === exerciseId);
+    return mySubmissions.some(s => {
+      // Normalize activityId comparison
+      const submissionActivityId = s.activityId?.toString().trim() || '';
+      const expectedActivityId = activityId?.toString().trim() || '';
+      const activityMatches = submissionActivityId === expectedActivityId || 
+                              (submissionActivityId === '' && expectedActivityId !== '');
+      
+      return activityMatches &&
+        s.exerciseId === exerciseId && 
+        s.status === 'COMPLETED';
+    });
+  };
+  
+  const hasPendingResolutionWithCode = (activityId: string, exerciseId: string) => {
+    return mySubmissions.some(s => {
+      // Normalize activityId comparison (handle empty strings and nulls)
+      const submissionActivityId = s.activityId?.toString().trim() || '';
+      const expectedActivityId = activityId?.toString().trim() || '';
+      
+      // Also check if exercise matches and has code
+      const exerciseMatches = s.exerciseId === exerciseId;
+      const hasCode = s.code && s.code.length > 0;
+      const hasPoints = s.points > 0;
+      const isPending = s.status === 'PENDING';
+      
+      // If activityId is empty in submission, we can still match by exerciseId only
+      // This handles cases where the exercise might not have activityId set yet
+      const activityMatches = submissionActivityId === expectedActivityId || 
+                              (submissionActivityId === '' && expectedActivityId !== '');
+      
+      return exerciseMatches && activityMatches && isPending && hasCode && hasPoints;
+    });
   };
 
   return (
@@ -145,14 +264,36 @@ export function StudentActivities() {
                     {activityExercises.map((exercise) => {
                       const isCompleted = isExerciseCompleted(activity.id, exercise.id);
                       const submission = mySubmissions.find(
-                        s => s.activityId === activity.id && s.exerciseId === exercise.id
+                        s => s.activityId === activity.id && 
+                        s.exerciseId === exercise.id &&
+                        s.status === 'COMPLETED'
                       );
+                      
+                      // Check if there's a pending resolution with code assigned by professor
+                      // Only show if not already completed
+                      const pendingWithCode = !isCompleted && hasPendingResolutionWithCode(activity.id, exercise.id);
+                      const pendingResolution = !isCompleted ? mySubmissions.find(s => {
+                        // Normalize activityId comparison
+                        const submissionActivityId = s.activityId?.toString().trim() || '';
+                        const expectedActivityId = activity.id?.toString().trim() || '';
+                        const activityMatches = submissionActivityId === expectedActivityId || 
+                                                (submissionActivityId === '' && expectedActivityId !== '');
+                        
+                        return activityMatches &&
+                          s.exerciseId === exercise.id &&
+                          s.status === 'PENDING' &&
+                          s.code && 
+                          s.code.length > 0 && 
+                          s.points > 0;
+                      }) : null;
 
                       return (
                         <div
                           key={exercise.id}
                           className={`p-4 rounded-lg border ${
-                            isCompleted ? 'bg-green-50 border-green-200' : 'bg-gray-50'
+                            isCompleted ? 'bg-green-50 border-green-200' : 
+                            pendingWithCode ? 'bg-yellow-50 border-yellow-200' : 
+                            'bg-gray-50'
                           }`}
                         >
                           <div className="flex items-start justify-between">
@@ -161,6 +302,9 @@ export function StudentActivities() {
                                 <h4>{exercise.title}</h4>
                                 {isCompleted && (
                                   <CheckCircle2 className="size-4 text-green-600" />
+                                )}
+                                {pendingWithCode && !isCompleted && (
+                                  <QrCode className="size-4 text-yellow-600" />
                                 )}
                               </div>
                               <p className="text-sm text-muted-foreground mt-1">
@@ -175,17 +319,23 @@ export function StudentActivities() {
                                     {submission.points} puntos
                                   </span>
                                 )}
+                                {pendingWithCode && !isCompleted && pendingResolution && (
+                                  <span className="text-sm text-yellow-600 font-medium">
+                                    Código asignado: {pendingResolution.points} puntos pendientes
+                                  </span>
+                                )}
                               </div>
                             </div>
-                            {activity.isActive && !isCompleted && (
+                            {!isCompleted && (
                               <Button
                                 size="sm"
+                                variant={pendingWithCode ? "default" : "outline"}
                                 onClick={() => {
                                   setSelectedActivity(activity.id);
                                   setSelectedExerciseId(exercise.id);
                                 }}
                               >
-                                Entregar
+                                {pendingWithCode ? "Validar Código" : activity.isActive ? "Entregar" : "Ver Detalles"}
                               </Button>
                             )}
                           </div>
@@ -218,9 +368,50 @@ export function StudentActivities() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Entregar Ejercicio</DialogTitle>
+            <DialogTitle>
+              {(() => {
+                const pending = mySubmissions.find(s => {
+                  const submissionActivityId = s.activityId?.toString().trim() || '';
+                  const expectedActivityId = selectedActivity?.toString().trim() || '';
+                  const activityMatches = submissionActivityId === expectedActivityId || 
+                                          (submissionActivityId === '' && expectedActivityId !== '');
+                  
+                  return activityMatches &&
+                    s.exerciseId === selectedExerciseId &&
+                    s.status === 'PENDING' &&
+                    s.code && 
+                    s.code.length > 0 && 
+                    s.points > 0;
+                });
+                return pending ? "Validar Código" : "Entregar Ejercicio";
+              })()}
+            </DialogTitle>
             <DialogDescription>
-              Ingresa el código proporcionado por el profesor
+              {(() => {
+                const pending = mySubmissions.find(s => {
+                  const submissionActivityId = s.activityId?.toString().trim() || '';
+                  const expectedActivityId = selectedActivity?.toString().trim() || '';
+                  const activityMatches = submissionActivityId === expectedActivityId || 
+                                          (submissionActivityId === '' && expectedActivityId !== '');
+                  
+                  return activityMatches &&
+                    s.exerciseId === selectedExerciseId &&
+                    s.status === 'PENDING' &&
+                    s.code && 
+                    s.code.length > 0 && 
+                    s.points > 0;
+                });
+                return pending ? (
+                  <>
+                    El profesor ha asignado puntos a tu entrega. Ingresa el código para validar y recibir los puntos.
+                    <span className="block mt-2 text-sm font-medium text-yellow-600">
+                      Puntos asignados: {pending.points}
+                    </span>
+                  </>
+                ) : (
+                  "Ingresa el código proporcionado por el profesor"
+                );
+              })()}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -238,11 +429,65 @@ export function StudentActivities() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                El profesor te proporcionará este código al revisar tu solución
+                {(() => {
+                  const pending = mySubmissions.find(s => {
+                    const submissionActivityId = s.activityId?.toString().trim() || '';
+                    const expectedActivityId = selectedActivity?.toString().trim() || '';
+                    const activityMatches = submissionActivityId === expectedActivityId || 
+                                            (submissionActivityId === '' && expectedActivityId !== '');
+                    
+                    return activityMatches &&
+                      s.exerciseId === selectedExerciseId &&
+                      s.status === 'PENDING' &&
+                      s.code && 
+                      s.code.length > 0 && 
+                      s.points > 0;
+                  });
+                  return pending ? (
+                    "Ingresa el código que el profesor te proporcionó para validar tu entrega y recibir los puntos."
+                  ) : (
+                    "El profesor te proporcionará este código al revisar tu solución"
+                  );
+                })()}
               </p>
             </div>
-            <Button onClick={handleSubmitCode} className="w-full">
-              Confirmar Entrega
+            <Button 
+              onClick={
+                (() => {
+                  const pending = mySubmissions.find(s => {
+                    const submissionActivityId = s.activityId?.toString().trim() || '';
+                    const expectedActivityId = selectedActivity?.toString().trim() || '';
+                    const activityMatches = submissionActivityId === expectedActivityId || 
+                                            (submissionActivityId === '' && expectedActivityId !== '');
+                    
+                    return activityMatches &&
+                      s.exerciseId === selectedExerciseId &&
+                      s.status === 'PENDING' &&
+                      s.code && 
+                      s.code.length > 0 && 
+                      s.points > 0;
+                  });
+                  return pending ? handleValidateCode : handleSubmitCode;
+                })()
+              } 
+              className="w-full"
+            >
+              {(() => {
+                const pending = mySubmissions.find(s => {
+                  const submissionActivityId = s.activityId?.toString().trim() || '';
+                  const expectedActivityId = selectedActivity?.toString().trim() || '';
+                  const activityMatches = submissionActivityId === expectedActivityId || 
+                                          (submissionActivityId === '' && expectedActivityId !== '');
+                  
+                  return activityMatches &&
+                    s.exerciseId === selectedExerciseId &&
+                    s.status === 'PENDING' &&
+                    s.code && 
+                    s.code.length > 0 && 
+                    s.points > 0;
+                });
+                return pending ? "Validar Código" : "Confirmar Entrega";
+              })()}
             </Button>
           </div>
         </DialogContent>

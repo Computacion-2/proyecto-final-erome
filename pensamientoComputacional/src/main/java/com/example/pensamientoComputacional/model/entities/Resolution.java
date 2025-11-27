@@ -21,7 +21,7 @@ public class Resolution {
     @JoinColumn(name = "student_id", nullable = false)
     private Student student;
     
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "exercise_id", nullable = false)
     private Exercise exercise;
     

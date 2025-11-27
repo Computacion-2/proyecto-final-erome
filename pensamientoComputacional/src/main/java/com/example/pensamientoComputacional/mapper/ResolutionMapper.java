@@ -12,7 +12,7 @@ public interface ResolutionMapper {
     @Mapping(target = "exerciseId", source = "exercise.id")
     @Mapping(target = "awardedBy", source = "awardedBy.id")
     @Mapping(target = "student", ignore = true)
-    @Mapping(target = "exercise", ignore = true)
+    @Mapping(target = "exercise", source = "exercise") // Include exercise to get activityId
     @Mapping(target = "awardedByProfessor", ignore = true)
     ResolutionDto entityToDto(Resolution resolution);
     

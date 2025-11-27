@@ -28,9 +28,26 @@ export const resolutionsApi = {
     return await apiClient.get<Resolution[]>(`/resolutions/activity/${activityId}`);
   },
 
-  async assignPoints(id: number, points: number): Promise<Resolution> {
+  async assignPoints(id: number, points: number, code?: string): Promise<Resolution> {
     return await apiClient.put<Resolution>(`/resolutions/${id}/points`, {
       pointsAwarded: points,
+      code: code,
+    });
+  },
+  
+  async createOrUpdateResolution(studentId: number, exerciseId: number, points: number, code: string): Promise<Resolution> {
+    // Use the new endpoint that handles both create and update
+    return await apiClient.post<Resolution>('/resolutions/assign', {
+      studentId,
+      exerciseId,
+      code,
+      pointsAwarded: points,
+    });
+  },
+  
+  async validateCode(id: number, code: string): Promise<Resolution> {
+    return await apiClient.post<Resolution>(`/resolutions/${id}/validate-code`, {
+      code,
     });
   },
 };

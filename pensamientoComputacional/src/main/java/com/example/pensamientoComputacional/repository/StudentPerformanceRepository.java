@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface StudentPerformanceRepository extends JpaRepository<StudentPerformance, Long> {
+    StudentPerformance findByStudent(com.example.pensamientoComputacional.model.entities.Student student);
 }

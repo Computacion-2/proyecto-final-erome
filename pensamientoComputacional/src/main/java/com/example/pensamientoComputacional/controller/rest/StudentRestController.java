@@ -2,7 +2,11 @@ package com.example.pensamientoComputacional.controller.rest;
 
 import com.example.pensamientoComputacional.mapper.StudentMapper;
 import com.example.pensamientoComputacional.model.dto.StudentDto;
+import com.example.pensamientoComputacional.model.entities.Group;
 import com.example.pensamientoComputacional.model.entities.Student;
+import com.example.pensamientoComputacional.model.entities.StudentEnrollment;
+import com.example.pensamientoComputacional.repository.GroupRepository;
+import com.example.pensamientoComputacional.repository.StudentEnrollmentRepository;
 import com.example.pensamientoComputacional.repository.StudentRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -16,7 +20,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
@@ -31,6 +37,12 @@ public class StudentRestController {
 
     @Autowired
     private StudentMapper studentMapper;
+    
+    @Autowired
+    private GroupRepository groupRepository;
+    
+    @Autowired
+    private StudentEnrollmentRepository studentEnrollmentRepository;
 
     @GetMapping
     @PreAuthorize("hasAuthority('READ_USER') or hasRole('ADMIN') or hasRole('PROFESSOR')")
@@ -51,12 +63,70 @@ public class StudentRestController {
             @ApiResponse(responseCode = "403", description = "Sin permisos suficientes")
     })
     public ResponseEntity<List<StudentDto>> getStudentsByGroup(@PathVariable String groupName) {
-        List<Student> students = studentRepository.findAll().stream()
+        System.out.println("getStudentsByGroup called with groupName: '" + groupName + "'");
+        
+        // Normalize group name (trim whitespace)
+        String normalizedGroupName = groupName != null ? groupName.trim() : "";
+        System.out.println("Normalized groupName: '" + normalizedGroupName + "'");
+        
+        // Find group by name (case-insensitive)
+        Group group = groupRepository.findByName(normalizedGroupName)
+                .orElseGet(() -> {
+                    System.out.println("Group not found by exact name, trying case-insensitive search");
+                    // Try case-insensitive search
+                    List<Group> allGroups = groupRepository.findAll();
+                    System.out.println("Available groups in database: " + 
+                        allGroups.stream().map(Group::getName).collect(Collectors.toList()));
+                    
+                    Group found = allGroups.stream()
+                            .filter(g -> g.getName() != null && 
+                                g.getName().trim().equalsIgnoreCase(normalizedGroupName))
+                            .findFirst()
+                            .orElse(null);
+                    
+                    if (found != null) {
+                        System.out.println("Found group by case-insensitive search: " + found.getName());
+                    } else {
+                        System.out.println("Group not found even with case-insensitive search");
+                    }
+                    return found;
+                });
+        
+        if (group == null) {
+            System.out.println("WARNING: Group '" + groupName + "' not found in database");
+        } else {
+            System.out.println("Found group: " + group.getName() + " (ID: " + group.getId() + ")");
+        }
+        
+        Set<Student> students = new HashSet<>();
+        
+        // First, find students by StudentEnrollment (preferred method)
+        if (group != null) {
+            List<StudentEnrollment> enrollments = studentEnrollmentRepository.findByGroupAndIsActiveTrue(group);
+            System.out.println("Found " + enrollments.size() + " active enrollments for group " + group.getName());
+            for (StudentEnrollment enrollment : enrollments) {
+                students.add(enrollment.getStudent());
+                System.out.println("  - Student: " + enrollment.getStudent().getUser().getName() + 
+                    " (ID: " + enrollment.getStudent().getId() + ")");
+            }
+        }
+        
+        // Also include students with group field matching (fallback for legacy data)
+        List<Student> studentsByUserGroup = studentRepository.findAll().stream()
                 .filter(student -> {
                     String studentGroup = student.getUser().getGroup();
-                    return studentGroup != null && studentGroup.equalsIgnoreCase(groupName);
+                    boolean matches = studentGroup != null && 
+                        studentGroup.trim().equalsIgnoreCase(normalizedGroupName);
+                    if (matches) {
+                        System.out.println("Found student by user.group: " + student.getUser().getName() + 
+                            " with group: '" + studentGroup + "'");
+                    }
+                    return matches;
                 })
                 .collect(Collectors.toList());
+        students.addAll(studentsByUserGroup);
+        
+        System.out.println("Total students found: " + students.size());
         
         List<StudentDto> studentDtos = students.stream()
                 .map(studentMapper::entityToDto)

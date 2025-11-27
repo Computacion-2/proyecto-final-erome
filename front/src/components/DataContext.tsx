@@ -34,6 +34,7 @@ export interface Submission {
   points: number;
   submittedAt: Date;
   code?: string;
+  status?: string; // PENDING, COMPLETED, etc.
 }
 
 interface DataContextType {
@@ -114,6 +115,7 @@ function mapApiResolutionToSubmission(apiResolution: ApiResolution): Submission 
     points: apiResolution.pointsAwarded || 0,
     submittedAt: new Date(apiResolution.submittedAt),
     code: apiResolution.code,
+    status: apiResolution.status || 'PENDING', // Default to PENDING if status is missing
   };
 }
 

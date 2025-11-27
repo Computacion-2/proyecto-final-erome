@@ -7,9 +7,11 @@ import com.example.pensamientoComputacional.model.entities.Professor;
 import com.example.pensamientoComputacional.model.entities.Resolution;
 import com.example.pensamientoComputacional.model.entities.Student;
 import com.example.pensamientoComputacional.model.entities.User;
+import com.example.pensamientoComputacional.model.entities.StudentPerformance;
 import com.example.pensamientoComputacional.repository.ExerciseRepository;
 import com.example.pensamientoComputacional.repository.ProfessorRepository;
 import com.example.pensamientoComputacional.repository.ResolutionRepository;
+import com.example.pensamientoComputacional.repository.StudentPerformanceRepository;
 import com.example.pensamientoComputacional.repository.StudentRepository;
 import com.example.pensamientoComputacional.service.IUserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -53,6 +55,9 @@ public class ResolutionRestController {
 
     @Autowired
     private IUserService userService;
+
+    @Autowired
+    private StudentPerformanceRepository studentPerformanceRepository;
 
     @GetMapping
     @Operation(summary = "Obtener todas las resoluciones", description = "Retorna todas las resoluciones del sistema")
@@ -184,6 +189,80 @@ public class ResolutionRestController {
         return ResponseEntity.ok(resolutionDtos);
     }
 
+    @PostMapping("/assign")
+    @PreAuthorize("hasRole('PROFESSOR') or hasRole('ADMIN')")
+    @Operation(summary = "Asignar puntos y código", description = "Crea o actualiza una resolución con puntos y código asignados por el profesor")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Puntos asignados exitosamente"),
+            @ApiResponse(responseCode = "201", description = "Resolución creada exitosamente"),
+            @ApiResponse(responseCode = "401", description = "No autorizado"),
+            @ApiResponse(responseCode = "403", description = "Sin permisos suficientes")
+    })
+    public ResponseEntity<ResolutionDto> assignPointsWithCode(@RequestBody ResolutionDto resolutionDto) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String email = authentication.getName();
+        User user = userService.findByEmail(email);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        Professor professor = professorRepository.findById(user.getId())
+                .orElseThrow(() -> new RuntimeException("Usuario no es un profesor"));
+
+        // Find existing resolution for this student and exercise
+        Student student = studentRepository.findById(resolutionDto.getStudentId())
+                .orElseThrow(() -> new RuntimeException("Estudiante no encontrado"));
+        
+        Exercise exercise = exerciseRepository.findById(resolutionDto.getExerciseId())
+                .orElseThrow(() -> new RuntimeException("Ejercicio no encontrado"));
+
+        Resolution existingResolution = resolutionRepository.findAll().stream()
+                .filter(r -> r.getStudent().getId().equals(student.getId()) 
+                        && r.getExercise().getId().equals(exercise.getId())
+                        && r.getStatus().equals("PENDING"))
+                .findFirst()
+                .orElse(null);
+
+        if (existingResolution != null) {
+            // Update existing resolution
+            if (resolutionDto.getPointsAwarded() != null) {
+                existingResolution.setPointsAwarded(resolutionDto.getPointsAwarded());
+            }
+            if (resolutionDto.getCode() != null && !resolutionDto.getCode().isEmpty()) {
+                existingResolution.setCode(resolutionDto.getCode());
+            }
+            existingResolution.setAwardedBy(professor);
+            existingResolution.setStatus("PENDING"); // Keep as PENDING until student validates
+
+            Resolution updatedResolution = resolutionRepository.save(existingResolution);
+            return ResponseEntity.ok(resolutionMapper.entityToDto(updatedResolution));
+        } else {
+            // Create new resolution
+            Resolution newResolution = new Resolution();
+            newResolution.setStudent(student);
+            newResolution.setExercise(exercise);
+            newResolution.setPointsAwarded(resolutionDto.getPointsAwarded());
+            newResolution.setCode(resolutionDto.getCode() != null ? resolutionDto.getCode() : "");
+            newResolution.setAwardedBy(professor);
+            newResolution.setStatus("PENDING");
+            
+            // Count previous attempts
+            long attemptCount = resolutionRepository.findAll().stream()
+                    .filter(r -> r.getStudent().getId().equals(student.getId()) 
+                            && r.getExercise().getId().equals(exercise.getId()))
+                    .count();
+            newResolution.setAttemptNo((int) (attemptCount + 1));
+
+            Resolution savedResolution = resolutionRepository.save(newResolution);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(resolutionMapper.entityToDto(savedResolution));
+        }
+    }
+
     @PutMapping("/{id}/points")
     @PreAuthorize("hasRole('PROFESSOR') or hasRole('ADMIN')")
     @Operation(summary = "Asignar puntos", description = "Asigna puntos a una resolución (solo profesores)")
@@ -215,10 +294,100 @@ public class ResolutionRestController {
                     if (resolutionDto.getPointsAwarded() != null) {
                         existingResolution.setPointsAwarded(resolutionDto.getPointsAwarded());
                     }
+                    // Save the code if provided (this is the code the student needs to validate)
+                    if (resolutionDto.getCode() != null && !resolutionDto.getCode().isEmpty()) {
+                        existingResolution.setCode(resolutionDto.getCode());
+                    }
                     existingResolution.setAwardedBy(professor);
-                    existingResolution.setStatus("COMPLETED");
+                    // Keep status as PENDING until student validates with code
+                    // Status will be changed to COMPLETED when student validates
+                    if (existingResolution.getStatus().equals("PENDING")) {
+                        // Keep as PENDING - student needs to validate with code
+                    } else {
+                        existingResolution.setStatus("COMPLETED");
+                    }
 
                     Resolution updatedResolution = resolutionRepository.save(existingResolution);
+                    return ResponseEntity.ok(resolutionMapper.entityToDto(updatedResolution));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+    
+    @PostMapping("/{id}/validate-code")
+    @PreAuthorize("hasRole('STUDENT') or hasRole('ADMIN')")
+    @Operation(summary = "Validar código", description = "Valida el código de una resolución y la marca como completada (solo estudiantes)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Código validado exitosamente"),
+            @ApiResponse(responseCode = "400", description = "Código inválido"),
+            @ApiResponse(responseCode = "404", description = "Resolución no encontrada"),
+            @ApiResponse(responseCode = "401", description = "No autorizado"),
+            @ApiResponse(responseCode = "403", description = "Sin permisos suficientes")
+    })
+    public ResponseEntity<ResolutionDto> validateCode(
+            @PathVariable Long id,
+            @RequestBody ResolutionDto resolutionDto) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String email = authentication.getName();
+        User user = userService.findByEmail(email);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        Student student = studentRepository.findById(user.getId())
+                .orElseThrow(() -> new RuntimeException("Usuario no es un estudiante"));
+
+        return resolutionRepository.findById(id)
+                .map(existingResolution -> {
+                    // Verify that this resolution belongs to the authenticated student
+                    if (!existingResolution.getStudent().getId().equals(student.getId())) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).<ResolutionDto>build();
+                    }
+                    
+                    // Verify the code matches
+                    String providedCode = resolutionDto.getCode();
+                    String storedCode = existingResolution.getCode();
+                    
+                    if (providedCode == null || storedCode == null || 
+                        !providedCode.trim().equalsIgnoreCase(storedCode.trim())) {
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).<ResolutionDto>build();
+                    }
+                    
+                    // Code is valid, mark as completed
+                    existingResolution.setStatus("COMPLETED");
+                    
+                    Resolution updatedResolution = resolutionRepository.save(existingResolution);
+                    
+                    // Update student's total points
+                    Integer pointsAwarded = existingResolution.getPointsAwarded();
+                    if (pointsAwarded != null && pointsAwarded > 0) {
+                        // Get or create student performance
+                        StudentPerformance performance = studentPerformanceRepository.findByStudent(student);
+                        if (performance == null) {
+                            performance = new StudentPerformance();
+                            performance.setStudent(student);
+                            performance.setTotalPoints(0);
+                            performance.setCategory("principiante");
+                        }
+                        
+                        // Add points
+                        performance.setTotalPoints(performance.getTotalPoints() + pointsAwarded);
+                        
+                        // Update category based on total points
+                        if (performance.getTotalPoints() >= 500) {
+                            performance.setCategory("pro");
+                        } else if (performance.getTotalPoints() >= 250) {
+                            performance.setCategory("killer");
+                        } else {
+                            performance.setCategory("principiante");
+                        }
+                        
+                        studentPerformanceRepository.save(performance);
+                    }
+                    
                     return ResponseEntity.ok(resolutionMapper.entityToDto(updatedResolution));
                 })
                 .orElse(ResponseEntity.notFound().build());

@@ -28,6 +28,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
@@ -48,6 +50,21 @@ public class AuthRestController {
 
     @Autowired
     private UserMapper userMapper;
+    
+    @Autowired
+    private com.example.pensamientoComputacional.repository.ProfessorRepository professorRepository;
+    
+    @Autowired
+    private com.example.pensamientoComputacional.repository.ProfessorAssignmentRepository professorAssignmentRepository;
+    
+    @Autowired
+    private com.example.pensamientoComputacional.repository.StudentRepository studentRepository;
+    
+    @Autowired
+    private com.example.pensamientoComputacional.repository.StudentEnrollmentRepository studentEnrollmentRepository;
+    
+    @Autowired
+    private com.example.pensamientoComputacional.repository.StudentPerformanceRepository studentPerformanceRepository;
 
     @PostMapping("/login")
     @Operation(summary = "Iniciar sesión", description = "Autentica un usuario y retorna tokens JWT")
@@ -72,10 +89,14 @@ public class AuthRestController {
 
             String refreshToken = tokenProvider.generateRefreshToken(user);
 
+            // Map user to DTO and enrich with group information
+            UserDto userDto = userMapper.entityToDto(user);
+            enrichUserDtoWithGroups(userDto, user);
+
             LoginResponse response = new LoginResponse();
             response.setToken(token);
             response.setRefreshToken(refreshToken);
-            response.setUser(userMapper.entityToDto(user));
+            response.setUser(userDto);
             response.setExpiresIn(86400000L); // 24 hours in milliseconds
 
             return ResponseEntity.ok(response);
@@ -104,8 +125,11 @@ public class AuthRestController {
                     registerRequest.getGroup(),
                     registerRequest.getStudentRole());
 
+            UserDto userDto = userMapper.entityToDto(user);
+            enrichUserDtoWithGroups(userDto, user);
+            
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(userMapper.entityToDto(user));
+                    .body(userDto);
         } catch (com.example.pensamientoComputacional.service.exception.BusinessException be) {
             // Caso típico: correo ya existe u otra validación de negocio
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
@@ -179,9 +203,67 @@ public class AuthRestController {
             String email = authentication.getName();
             User user = userService.findByEmail(email);
             if (user != null) {
-                return ResponseEntity.ok(userMapper.entityToDto(user));
+                UserDto userDto = userMapper.entityToDto(user);
+                enrichUserDtoWithGroups(userDto, user);
+                return ResponseEntity.ok(userDto);
             }
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+    
+    /**
+     * Enriches UserDto with group information from StudentEnrollment or ProfessorAssignment
+     */
+    private void enrichUserDtoWithGroups(UserDto userDto, User user) {
+        if (userDto.getRole() != null) {
+            String roleUpper = userDto.getRole().toUpperCase();
+            
+            if ("PROFESSOR".equals(roleUpper)) {
+                // Get professor groups from ProfessorAssignment
+                com.example.pensamientoComputacional.model.entities.Professor professor = 
+                    professorRepository.findById(user.getId()).orElse(null);
+                if (professor != null) {
+                    List<com.example.pensamientoComputacional.model.entities.ProfessorAssignment> assignments = 
+                        professorAssignmentRepository.findByProfessorId(professor.getId());
+                    List<String> groupNames = assignments.stream()
+                            .map(assignment -> assignment.getGroup().getName())
+                            .collect(java.util.stream.Collectors.toList());
+                    userDto.setGroups(groupNames);
+                }
+            } else if ("STUDENT".equals(roleUpper)) {
+                // Get student's group from StudentEnrollment (preferred) or User.group (fallback)
+                com.example.pensamientoComputacional.model.entities.Student student = 
+                    studentRepository.findById(user.getId()).orElse(null);
+                if (student != null) {
+                    List<com.example.pensamientoComputacional.model.entities.StudentEnrollment> enrollments = 
+                        studentEnrollmentRepository.findByStudentAndIsActiveTrue(student);
+                    if (!enrollments.isEmpty()) {
+                        // Use the first active enrollment's group
+                        String groupName = enrollments.get(0).getGroup().getName();
+                        userDto.setGroup(groupName);
+                    } else {
+                        // Fallback to User.group if no enrollment found
+                        String userGroup = user.getGroup();
+                        if (userGroup != null && !userGroup.isEmpty()) {
+                            userDto.setGroup(userGroup);
+                        }
+                    }
+                    
+                    // Get totalPoints from StudentPerformance
+                    com.example.pensamientoComputacional.model.entities.StudentPerformance performance = 
+                        studentPerformanceRepository.findByStudent(student);
+                    if (performance != null) {
+                        userDto.setTotalPoints(performance.getTotalPoints());
+                        userDto.setPerformanceCategory(performance.getCategory());
+                    }
+                } else {
+                    // If student entity doesn't exist, use User.group
+                    String userGroup = user.getGroup();
+                    if (userGroup != null && !userGroup.isEmpty()) {
+                        userDto.setGroup(userGroup);
+                    }
+                }
+            }
+        }
     }
 }
